@@ -1,7 +1,7 @@
 {
-  "name": "pixel-art-crdt",
+  "name": "pixel-art-collaboratif",
   "version": "1.0.0",
-  "description": "",
+  "description": "Application de pixel art collaboratif en temps réel avec Supabase",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,10 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@supabase/supabase-js": "^2.52.0",
-    "y-indexeddb": "^9.0.12",
-    "y-webrtc": "^10.3.0",
-    "yjs": "^13.6.27"
+    "@supabase/supabase-js": "^2.52.0"
   },
   "devDependencies": {
     "vite": "^7.0.5"

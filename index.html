@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Art CRDT - Yjs</title>
+    <title>Pixel Art Collaboratif</title>
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
     <div class="container">
-        <h1>🎨 Pixel Art CRDT avec Yjs</h1>
+        <h1>🎨 Pixel Art Collaboratif</h1>
         
         <div class="controls">
             <input type="text" id="roomInput" placeholder="Nom de la room" value="pixel-room">
@@ -29,8 +29,13 @@
         
         <div id="pixelCanvas" class="pixel-canvas"></div>
 
+        <div class="users-list">
+            <h4>👥 Utilisateurs connectés</h4>
+            <div id="usersList"></div>
+        </div>
+
         <div class="debug-panel">
-            <h4>🐛 Debug CRDT</h4>
+            <h4>🐛 Debug</h4>
             <pre id="debugInfo"></pre>
         </div>
     </div>

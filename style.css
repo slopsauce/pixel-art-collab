@@ -1,4 +1,4 @@
-/* style.css - Pixel Art CRDT */
+/* style.css - Pixel Art Collaboratif */
 
 * {
   margin: 0;
@@ -171,6 +171,7 @@ h1 {
   margin: 0 auto;
   width: fit-content;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
 }
 
 .pixel {
@@ -284,4 +285,64 @@ h1 {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #444;
+}
+
+/* Curseurs des utilisateurs */
+.user-cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1000;
+  transition: all 0.1s ease-out;
+}
+
+.cursor-pointer {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cursor-label {
+  position: absolute;
+  top: -20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Liste des utilisateurs */
+.users-list {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+.users-list h4 {
+  color: #3a86ff;
+  margin-bottom: 10px;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.user-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.pixel-hover {
+  position: relative;
+  z-index: 10;
 }

@@ -1,4 +1,4 @@
-// main.js - Pixel Art avec synchronisation temps réel
+// main.js - Pixel Art Collaboratif avec Supabase
 import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js'
 
@@ -17,6 +17,10 @@ let selectedColor = COLORS[2] // Rouge par défaut
 let pixelCache = new Map() // Cache local des pixels
 let subscription = null
 let pollingInterval = null // Pour la synchronisation par polling
+let presenceChannel = null // Pour la présence des utilisateurs
+let myUserId = null // ID unique de l'utilisateur
+let myUserColor = null // Couleur de l'utilisateur
+let connectedUsers = new Map() // Utilisateurs connectés
 
 // Métriques
 const metrics = {
@@ -27,6 +31,10 @@ const metrics = {
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', () => {
   try {
+    // Générer un ID utilisateur unique
+    myUserId = 'user-' + Math.random().toString(36).substr(2, 9)
+    myUserColor = `hsl(${Math.random() * 360}, 70%, 50%)`
+    
     initColorPalette()
     initPixelGrid()
     setupEventListeners()
@@ -36,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateDebugInfo, 1000)
     
     console.log('✅ Initialisation terminée')
+    console.log('👤 Mon ID:', myUserId)
   } catch (error) {
     console.error('❌ Erreur d\'initialisation:', error)
     alert('Erreur d\'initialisation: ' + error.message)
@@ -115,6 +124,35 @@ function setupEventListeners() {
         console.error('❌ Erreur lors de la connexion:', error)
       }
     }
+  })
+  
+  // Suivi du curseur sur la grille
+  document.getElementById('pixelCanvas').addEventListener('mousemove', async (e) => {
+    if (!subscription || !currentRoom) return
+    
+    const pixel = e.target.closest('.pixel')
+    if (pixel) {
+      const x = parseInt(pixel.dataset.x)
+      const y = parseInt(pixel.dataset.y)
+      
+      // Mettre à jour la position du curseur dans la présence
+      await subscription.track({
+        userId: myUserId,
+        userColor: myUserColor,
+        cursor: { x, y }
+      })
+    }
+  })
+  
+  // Cacher le curseur quand on quitte la grille
+  document.getElementById('pixelCanvas').addEventListener('mouseleave', async () => {
+    if (!subscription || !currentRoom) return
+    
+    await subscription.track({
+      userId: myUserId,
+      userColor: myUserColor,
+      cursor: { x: -1, y: -1 }
+    })
   })
 }
 
@@ -200,8 +238,7 @@ async function connect() {
     // Démarrer le polling immédiatement
     startPolling()
     
-    // S'abonner aux changements en temps réel (en arrière-plan)
-    // Ne pas attendre la connexion WebSocket
+    // S'abonner aux changements en temps réel et à la présence
     subscription = supabase
       .channel(`room:${currentRoom}`)
       .on('postgres_changes', 
@@ -216,13 +253,28 @@ async function connect() {
           handleRealtimeChange(payload)
         }
       )
-      .subscribe((status) => {
+      .on('presence', { event: 'sync' }, () => {
+        handlePresenceSync()
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('👋 Utilisateur rejoint:', newPresences)
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('👋 Utilisateur parti:', leftPresences)
+      })
+      .subscribe(async (status) => {
         console.log('📡 Statut de l\'abonnement:', status)
         
-        // Debug: vérifier l'état du channel
         if (status === 'SUBSCRIBED') {
           console.log('✅ Abonnement réussi au channel:', `room:${currentRoom}`)
           document.getElementById('peersCount').textContent = '✨ Realtime actif'
+          
+          // Envoyer notre présence
+          await subscription.track({
+            userId: myUserId,
+            userColor: myUserColor,
+            cursor: { x: -1, y: -1 }
+          })
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Erreur du channel')
           document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
@@ -450,6 +502,75 @@ function updateConnectionStatus(synced) {
     status.textContent = '🟡 Synchronisation...'
     status.className = 'status-syncing'
   }
+}
+
+// Gérer la synchronisation de présence
+function handlePresenceSync() {
+  if (!subscription) return
+  
+  const state = subscription.presenceState()
+  connectedUsers.clear()
+  
+  // Parcourir tous les utilisateurs présents
+  Object.entries(state).forEach(([key, presences]) => {
+    presences.forEach(presence => {
+      connectedUsers.set(presence.userId, {
+        userId: presence.userId,
+        userColor: presence.userColor,
+        cursor: presence.cursor
+      })
+    })
+  })
+  
+  updateUsersList()
+  updateCursors()
+}
+
+// Mettre à jour la liste des utilisateurs
+function updateUsersList() {
+  const usersList = document.getElementById('usersList')
+  usersList.innerHTML = ''
+  
+  connectedUsers.forEach(user => {
+    const userItem = document.createElement('div')
+    userItem.className = 'user-item'
+    userItem.innerHTML = `
+      <div class="user-indicator" style="background-color: ${user.userColor}"></div>
+      <span>${user.userId === myUserId ? 'Moi' : user.userId}</span>
+    `
+    usersList.appendChild(userItem)
+  })
+  
+  // Mettre à jour le compteur
+  const count = connectedUsers.size
+  document.getElementById('peersCount').textContent = `👥 ${count} utilisateur${count > 1 ? 's' : ''}`
+}
+
+// Mettre à jour les curseurs
+function updateCursors() {
+  // Supprimer les anciens curseurs
+  document.querySelectorAll('.user-cursor').forEach(el => el.remove())
+  
+  // Ajouter les nouveaux curseurs
+  connectedUsers.forEach(user => {
+    if (user.userId === myUserId || user.cursor.x === -1) return
+    
+    const cursor = document.createElement('div')
+    cursor.className = 'user-cursor'
+    cursor.innerHTML = `
+      <div class="cursor-pointer" style="border-color: ${user.userColor}"></div>
+      <div class="cursor-label" style="background: ${user.userColor}">${user.userId}</div>
+    `
+    
+    const pixel = document.querySelector(`[data-x="${user.cursor.x}"][data-y="${user.cursor.y}"]`)
+    if (pixel) {
+      const rect = pixel.getBoundingClientRect()
+      const canvasRect = document.getElementById('pixelCanvas').getBoundingClientRect()
+      cursor.style.left = (rect.left - canvasRect.left) + 'px'
+      cursor.style.top = (rect.top - canvasRect.top) + 'px'
+      document.getElementById('pixelCanvas').appendChild(cursor)
+    }
+  })
 }
 
 function updatePeersCount() {
