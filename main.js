@@ -288,6 +288,72 @@ function setupEventListeners() {
   
   setupInstructions()
   
+  // Share button functionality
+  document.getElementById('shareBtn').addEventListener('click', async () => {
+    if (!currentRoom) return
+    
+    const url = new URL(window.location.href)
+    url.searchParams.set('room', currentRoom)
+    
+    try {
+      await navigator.clipboard.writeText(url.toString())
+      const btn = document.getElementById('shareBtn')
+      const originalText = btn.innerHTML
+      btn.innerHTML = '✅ Copié!'
+      setTimeout(() => {
+        btn.innerHTML = originalText
+      }, 2000)
+    } catch (err) {
+      alert('Impossible de copier le lien')
+    }
+  })
+  
+  // Export button functionality
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    if (!currentRoom) return
+    
+    const canvas = document.createElement('canvas')
+    canvas.width = GRID_SIZE * 10 // 10px per pixel for good resolution
+    canvas.height = GRID_SIZE * 10
+    const ctx = canvas.getContext('2d')
+    
+    // White background
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    
+    // Draw pixels
+    const pixelElements = document.querySelectorAll('.pixel')
+    pixelElements.forEach((pixel, index) => {
+      const x = index % GRID_SIZE
+      const y = Math.floor(index / GRID_SIZE)
+      const color = pixel.style.backgroundColor
+      
+      if (color && color !== 'transparent' && color !== '') {
+        ctx.fillStyle = color
+        ctx.fillRect(x * 10, y * 10, 10, 10)
+      }
+    })
+    
+    // Download
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `pixel-art-${currentRoom}-${Date.now()}.png`
+      a.click()
+      URL.revokeObjectURL(url)
+    })
+  })
+  
+  // Check URL params on load
+  const urlParams = new URLSearchParams(window.location.search)
+  const roomFromUrl = urlParams.get('room')
+  if (roomFromUrl && /^[a-zA-Z0-9-_]+$/.test(roomFromUrl) && roomFromUrl.length <= 50) {
+    document.getElementById('roomInput').value = roomFromUrl
+    // Optional: auto-connect
+    // setTimeout(() => document.getElementById('connectBtn').click(), 500)
+  }
+  
   // Sauvegarder le nom quand il change
   document.getElementById('nameInput').addEventListener('input', (e) => {
     myUserName = e.target.value.trim() || null
@@ -448,6 +514,8 @@ async function connect() {
     // Mettre à jour l'UI immédiatement
     document.getElementById('connectBtn').disabled = true
     document.getElementById('disconnectBtn').disabled = false
+    document.getElementById('shareBtn').disabled = false
+    document.getElementById('exportBtn').disabled = false
     updatePixelsCount()
     updateConnectionStatus(true)
     
@@ -606,6 +674,8 @@ function disconnect() {
   document.getElementById('connectBtn').disabled = false
   document.getElementById('connectBtn').textContent = 'Se connecter'
   document.getElementById('disconnectBtn').disabled = true
+  document.getElementById('shareBtn').disabled = true
+  document.getElementById('exportBtn').disabled = true
   updateConnectionStatus(null)
   document.getElementById('syncMode').textContent = '💤 Hors ligne'
   document.getElementById('peersCount').textContent = '👥 0 utilisateur'
