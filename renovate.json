@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch",
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["minor", "patch"]
+    }
+  ],
+  "labels": ["dependencies", "automated"],
+  "timezone": "Europe/Paris",
+  "schedule": ["after 10pm and before 5am on every weekday", "every weekend"]
+}

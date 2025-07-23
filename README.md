@@ -286,6 +286,18 @@ server {
 - Update documentation as needed
 - Ensure security audits pass
 
+### Dependency Management
+This project uses **Dependabot** for automatic dependency updates:
+- Weekly checks for new versions
+- Automatic pull requests for updates
+- Grouped updates to reduce noise
+- Security vulnerability alerts
+
+To enable Dependabot on your fork:
+1. Go to **Settings > Security & analysis**
+2. Enable **Dependabot alerts** and **Dependabot security updates**
+3. The `.github/dependabot.yml` configuration is already included
+
 ## 📈 Performance
 
 ### Optimization Features

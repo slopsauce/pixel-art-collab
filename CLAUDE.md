@@ -261,6 +261,20 @@ window.pixelDebug = {
 - **Animations**: Frame-by-frame pixel art animation
 - **AI integration**: AI-assisted drawing suggestions
 
+## 🔧 Dependency Management
+
+### Automated Updates with Dependabot
+- **Configuration**: `.github/dependabot.yml` sets up automatic dependency updates
+- **Schedule**: Weekly checks on Monday mornings
+- **Grouping**: All minor/patch updates grouped together to reduce PR noise
+- **Security**: Automatic security vulnerability alerts and updates
+- **Actions**: Also updates GitHub Actions versions
+
+### Alternative: Renovate
+- **Configuration**: `renovate.json` provided as alternative
+- **Features**: More granular control, automerge for minor updates
+- **Schedule**: Weekday nights and weekends (Europe/Paris timezone)
+
 ## 🔄 Standard Development Workflow
 
 **IMPORTANT**: Always follow this workflow when making changes to the project:
