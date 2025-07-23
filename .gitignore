@@ -3,8 +3,8 @@
 .env.local
 .env.production
 
-# Supabase configuration (if contains secrets)
-# supabase-config.js
+# Supabase configuration (contains secrets)
+supabase-config.js
 
 # Node modules
 node_modules/
