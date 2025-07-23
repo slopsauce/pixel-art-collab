@@ -155,9 +155,28 @@ function setupEventListeners() {
     }
   })
   
+  // Mettre à jour le texte du bouton si déjà connecté
+  document.getElementById('roomInput').addEventListener('input', () => {
+    const newRoom = document.getElementById('roomInput').value.trim()
+    
+    if (currentRoom) {
+      // Si connecté, activer le bouton seulement si la room est différente
+      if (newRoom && newRoom !== currentRoom) {
+        connectBtn.textContent = 'Changer de room'
+        connectBtn.disabled = false
+      } else {
+        connectBtn.textContent = 'Se connecter'
+        connectBtn.disabled = true
+      }
+    } else {
+      // Si pas connecté, activer le bouton si un nom est entré
+      connectBtn.textContent = 'Se connecter'
+      connectBtn.disabled = !newRoom
+    }
+  })
+  
   document.getElementById('disconnectBtn').addEventListener('click', disconnect)
   document.getElementById('clearBtn').addEventListener('click', clearCanvas)
-  document.getElementById('refreshBtn').addEventListener('click', manualRefresh)
   
   // Sauvegarder le nom quand il change
   document.getElementById('nameInput').addEventListener('input', (e) => {
@@ -196,6 +215,9 @@ function setupEventListeners() {
   document.getElementById('pixelCanvas').addEventListener('mousemove', async (e) => {
     if (!subscription || !currentRoom) return
     
+    // Ne pas envoyer les curseurs si on est seul
+    if (connectedUsers.size <= 1) return
+    
     const canvas = document.getElementById('pixelCanvas')
     const rect = canvas.getBoundingClientRect()
     
@@ -224,6 +246,9 @@ function setupEventListeners() {
   document.getElementById('pixelCanvas').addEventListener('mouseleave', () => {
     if (!subscription || !currentRoom) return
     
+    // Ne pas envoyer les curseurs si on est seul
+    if (connectedUsers.size <= 1) return
+    
     lastCursorX = -1
     lastCursorY = -1
     
@@ -237,42 +262,6 @@ function setupEventListeners() {
   })
 }
 
-// Rafraîchir manuellement
-async function manualRefresh() {
-  if (!currentRoom) return
-  
-  console.log('🔄 Rafraîchissement manuel...')
-  const btn = document.getElementById('refreshBtn')
-  btn.disabled = true
-  btn.textContent = '⏳ ...'
-  
-  try {
-    const { data: pixels, error } = await supabase
-      .from('pixels')
-      .select('*')
-      .eq('room', currentRoom)
-    
-    if (!error && pixels) {
-      // Effacer et recharger tous les pixels
-      pixelCache.clear()
-      initPixelGrid()
-      
-      pixels.forEach(pixel => {
-        const key = `${pixel.x},${pixel.y}`
-        pixelCache.set(key, pixel)
-        updatePixelDisplay(pixel.x, pixel.y, pixel.color)
-      })
-      
-      updatePixelsCount()
-      console.log('✅ Rafraîchissement terminé')
-    }
-  } catch (error) {
-    console.error('Erreur rafraîchissement:', error)
-  } finally {
-    btn.disabled = false
-    btn.textContent = '🔄 Rafraîchir'
-  }
-}
 
 // Connexion à une room
 async function connect() {
@@ -282,6 +271,12 @@ async function connect() {
   if (!roomName) {
     alert('Entre un nom de room !')
     return
+  }
+  
+  // Si déjà connecté à une room différente, se déconnecter d'abord
+  if (currentRoom && currentRoom !== roomName) {
+    console.log(`🔄 Changement de room: ${currentRoom} → ${roomName}`)
+    disconnect()
   }
   
   currentRoom = roomName
@@ -319,7 +314,6 @@ async function connect() {
     // Mettre à jour l'UI immédiatement
     document.getElementById('connectBtn').disabled = true
     document.getElementById('disconnectBtn').disabled = false
-    document.getElementById('refreshBtn').disabled = false
     updatePixelsCount()
     updateConnectionStatus(true)
     
@@ -363,7 +357,7 @@ async function connect() {
         
         if (status === 'SUBSCRIBED') {
           console.log('✅ Abonnement réussi au channel:', `room:${currentRoom}`)
-          document.getElementById('peersCount').textContent = '✨ Realtime actif'
+          document.getElementById('syncMode').textContent = '✨ Realtime actif'
           
           // Envoyer notre présence
           try {
@@ -378,10 +372,10 @@ async function connect() {
           }
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Erreur du channel')
-          document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
+          document.getElementById('syncMode').textContent = '🔄 Polling'
         } else if (status === 'TIMED_OUT') {
           console.error('⏱️ Timeout de connexion')
-          document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
+          document.getElementById('syncMode').textContent = '🔄 Polling'
         }
       })
     
@@ -399,7 +393,7 @@ function startPolling() {
   }
   
   // Démarrage du polling silencieux
-  document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
+  document.getElementById('syncMode').textContent = '🔄 Polling'
   
   // Polling toutes les 2 secondes
   pollingInterval = setInterval(async () => {
@@ -473,10 +467,11 @@ function disconnect() {
   // Reset UI
   initPixelGrid()
   document.getElementById('connectBtn').disabled = false
+  document.getElementById('connectBtn').textContent = 'Se connecter'
   document.getElementById('disconnectBtn').disabled = true
-  document.getElementById('refreshBtn').disabled = true
-  updateConnectionStatus(false)
-  document.getElementById('peersCount').textContent = '🌐 Mode: Serveur'
+  updateConnectionStatus(null)
+  document.getElementById('syncMode').textContent = '💤 Hors ligne'
+  document.getElementById('peersCount').textContent = '👥 0 utilisateur'
   document.getElementById('pixelsCount').textContent = '🎨 0 pixels'
 }
 
@@ -531,7 +526,7 @@ function handleRealtimeChange(payload) {
     clearInterval(pollingInterval)
     pollingInterval = null
     // Realtime fonctionne, arrêt du polling
-    document.getElementById('peersCount').textContent = '✨ Realtime actif'
+    document.getElementById('syncMode').textContent = '✨ Realtime actif'
   }
   
   if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -699,14 +694,13 @@ function updateCursors() {
 }
 
 function updatePeersCount() {
-  // Avec Supabase, on n'a pas de compteur de peers direct
-  document.getElementById('peersCount').textContent = '🌐 Mode: Serveur'
+  // Cette fonction n'est plus utilisée avec Supabase Presence
+  // Le compteur est géré dans updateUsersList()
 }
 
 function updatePixelsCount() {
   const count = pixelCache.size
   document.getElementById('pixelsCount').textContent = `🎨 ${count} pixels`
-  document.getElementById('docSize').textContent = `💾 Supabase`
 }
 
 function updateDebugInfo() {
