@@ -1,7 +1,6 @@
-// main.js - Pixel Art CRDT avec Yjs
-import * as Y from 'yjs'
-import { WebrtcProvider } from 'y-webrtc'
-import { IndexeddbPersistence } from 'y-indexeddb'
+// main.js - Pixel Art avec synchronisation temps réel
+import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js'
 
 // Configuration
 const GRID_SIZE = 16
@@ -12,13 +11,12 @@ const COLORS = [
 ]
 
 // État global
-let ydoc = null
-let provider = null
-let persistence = null
-let pixelMap = null
-let awareness = null
+let supabase = null
+let currentRoom = null
 let selectedColor = COLORS[2] // Rouge par défaut
-let room = null
+let pixelCache = new Map() // Cache local des pixels
+let subscription = null
+let pollingInterval = null // Pour la synchronisation par polling
 
 // Métriques
 const metrics = {
@@ -28,13 +26,20 @@ const metrics = {
 
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', () => {
-  initColorPalette()
-  initPixelGrid()
-  setupEventListeners()
-  
-  // Debug info
-  updateDebugInfo()
-  setInterval(updateDebugInfo, 1000)
+  try {
+    initColorPalette()
+    initPixelGrid()
+    setupEventListeners()
+    
+    // Debug info
+    updateDebugInfo()
+    setInterval(updateDebugInfo, 1000)
+    
+    console.log('✅ Initialisation terminée')
+  } catch (error) {
+    console.error('❌ Erreur d\'initialisation:', error)
+    alert('Erreur d\'initialisation: ' + error.message)
+  }
 })
 
 // Initialiser la palette de couleurs
@@ -81,14 +86,73 @@ function initPixelGrid() {
 
 // Event listeners
 function setupEventListeners() {
-  document.getElementById('connectBtn').addEventListener('click', connect)
+  const connectBtn = document.getElementById('connectBtn')
+  if (!connectBtn) {
+    console.error('❌ Bouton connect non trouvé!')
+    return
+  }
+  
+  connectBtn.addEventListener('click', async () => {
+    try {
+      console.log('🔘 Clic sur Se connecter')
+      await connect()
+    } catch (error) {
+      console.error('❌ Erreur lors de la connexion:', error)
+      alert('Erreur: ' + error.message)
+    }
+  })
+  
   document.getElementById('disconnectBtn').addEventListener('click', disconnect)
   document.getElementById('clearBtn').addEventListener('click', clearCanvas)
+  document.getElementById('refreshBtn').addEventListener('click', manualRefresh)
   
   // Enter pour se connecter
-  document.getElementById('roomInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') connect()
+  document.getElementById('roomInput').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      try {
+        await connect()
+      } catch (error) {
+        console.error('❌ Erreur lors de la connexion:', error)
+      }
+    }
   })
+}
+
+// Rafraîchir manuellement
+async function manualRefresh() {
+  if (!currentRoom || !supabase) return
+  
+  console.log('🔄 Rafraîchissement manuel...')
+  const btn = document.getElementById('refreshBtn')
+  btn.disabled = true
+  btn.textContent = '⏳ ...'
+  
+  try {
+    const { data: pixels, error } = await supabase
+      .from('pixels')
+      .select('*')
+      .eq('room', currentRoom)
+    
+    if (!error && pixels) {
+      // Effacer et recharger tous les pixels
+      pixelCache.clear()
+      initPixelGrid()
+      
+      pixels.forEach(pixel => {
+        const key = `${pixel.x},${pixel.y}`
+        pixelCache.set(key, pixel)
+        updatePixelDisplay(pixel.x, pixel.y, pixel.color)
+      })
+      
+      updatePixelsCount()
+      console.log('✅ Rafraîchissement terminé')
+    }
+  } catch (error) {
+    console.error('Erreur rafraîchissement:', error)
+  } finally {
+    btn.disabled = false
+    btn.textContent = '🔄 Rafraîchir'
+  }
 }
 
 // Connexion à une room
@@ -99,139 +163,243 @@ async function connect() {
     return
   }
   
-  room = roomName
-  console.log(`🚀 Connexion à la room: ${room}`)
+  currentRoom = roomName
+  console.log(`🚀 Connexion à la room: ${currentRoom}`)
   
-  // Créer le document Yjs
-  ydoc = new Y.Doc()
+  try {
+    // Initialiser Supabase
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    
+    // Créer la table si elle n'existe pas (pour la démo)
+    // En production, créez la table via l'interface Supabase
+    
+    // Charger les pixels existants
+    const { data: pixels, error } = await supabase
+      .from('pixels')
+      .select('*')
+      .eq('room', currentRoom)
+    
+    if (error && error.code !== 'PGRST116') { // Ignorer l'erreur si la table n'existe pas
+      console.error('Erreur de chargement:', error)
+    } else if (pixels) {
+      // Mettre en cache et afficher les pixels existants
+      pixels.forEach(pixel => {
+        const key = `${pixel.x},${pixel.y}`
+        pixelCache.set(key, pixel)
+        updatePixelDisplay(pixel.x, pixel.y, pixel.color)
+      })
+    }
+    
+    // Mettre à jour l'UI immédiatement
+    document.getElementById('connectBtn').disabled = true
+    document.getElementById('disconnectBtn').disabled = false
+    document.getElementById('refreshBtn').disabled = false
+    updatePixelsCount()
+    updateConnectionStatus(true)
+    
+    // Démarrer le polling immédiatement
+    startPolling()
+    
+    // S'abonner aux changements en temps réel (en arrière-plan)
+    // Ne pas attendre la connexion WebSocket
+    subscription = supabase
+      .channel(`room:${currentRoom}`)
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'pixels',
+          filter: `room=eq.${currentRoom}`
+        }, 
+        (payload) => {
+          console.log('🔄 Changement reçu:', payload)
+          handleRealtimeChange(payload)
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Statut de l\'abonnement:', status)
+        
+        // Debug: vérifier l'état du channel
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Abonnement réussi au channel:', `room:${currentRoom}`)
+          document.getElementById('peersCount').textContent = '✨ Realtime actif'
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Erreur du channel')
+          document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Timeout de connexion')
+          document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
+        }
+      })
+    
+  } catch (error) {
+    console.error('❌ Erreur de connexion:', error)
+    alert('Erreur de connexion. Vérifiez la configuration Supabase.')
+  }
+}
+
+// Polling pour synchronisation (fallback si realtime ne marche pas)
+function startPolling() {
+  // Arrêter le polling existant
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+  }
   
-  // Map CRDT pour les pixels
-  pixelMap = ydoc.getMap('pixels')
+  console.log('🔄 Démarrage du polling (intervalle: 2s)')
+  document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
   
-  // Observer les changements
-  pixelMap.observe(handlePixelChanges)
-  
-  // Persistance locale avec IndexedDB
-  persistence = new IndexeddbPersistence(room, ydoc)
-  persistence.on('synced', () => {
-    console.log('💾 Persistance locale synchronisée')
-  })
-  
-  // Provider WebRTC pour P2P
-  provider = new WebrtcProvider(room, ydoc, {
-    signaling: [
-      'wss://signaling.yjs.dev',
-      'wss://y-webrtc-signaling-eu.herokuapp.com',
-      'wss://y-webrtc-signaling-us.herokuapp.com'
-    ],
-    password: null,
-    maxConns: 20,
-    filterBcConns: true,
-    peerOpts: {} // Options WebRTC
-  })
-  
-  awareness = provider.awareness
-  
-  // Observer l'awareness (présence)
-  awareness.on('change', updatePeersCount)
-  
-  // Observer la synchronisation
-  provider.on('synced', (synced) => {
-    updateConnectionStatus(synced)
-    console.log('🔄 État de synchronisation:', synced)
-  })
-  
-  // Charger les pixels existants
-  renderAllPixels()
-  
-  // Mettre à jour l'UI
-  document.getElementById('connectBtn').disabled = true
-  document.getElementById('disconnectBtn').disabled = false
-  updateConnectionStatus(false)
+  // Polling toutes les 2 secondes
+  pollingInterval = setInterval(async () => {
+    if (!currentRoom || !supabase) return
+    
+    try {
+      const { data: pixels, error } = await supabase
+        .from('pixels')
+        .select('*')
+        .eq('room', currentRoom)
+      
+      if (!error && pixels) {
+        // Comparer avec le cache local
+        const serverPixels = new Map()
+        pixels.forEach(pixel => {
+          const key = `${pixel.x},${pixel.y}`
+          serverPixels.set(key, pixel)
+        })
+        
+        // Mettre à jour les pixels modifiés
+        let hasChanges = false
+        serverPixels.forEach((pixel, key) => {
+          const cachedPixel = pixelCache.get(key)
+          if (!cachedPixel || cachedPixel.timestamp !== pixel.timestamp) {
+            pixelCache.set(key, pixel)
+            updatePixelDisplay(pixel.x, pixel.y, pixel.color)
+            hasChanges = true
+          }
+        })
+        
+        // Supprimer les pixels qui n'existent plus sur le serveur
+        pixelCache.forEach((pixel, key) => {
+          if (!serverPixels.has(key)) {
+            pixelCache.delete(key)
+            const [x, y] = key.split(',').map(Number)
+            updatePixelDisplay(x, y, '#FFFFFF')
+            hasChanges = true
+          }
+        })
+        
+        if (hasChanges) {
+          updatePixelsCount()
+          console.log('🔄 Synchronisation par polling effectuée')
+        }
+      }
+    } catch (error) {
+      console.error('Erreur polling:', error)
+    }
+  }, 2000)
 }
 
 // Déconnexion
 function disconnect() {
   console.log('👋 Déconnexion...')
   
-  if (provider) {
-    provider.destroy()
-    provider = null
+  if (subscription) {
+    subscription.unsubscribe()
+    subscription = null
   }
   
-  if (persistence) {
-    persistence.destroy()
-    persistence = null
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
+    console.log('🛑 Arrêt du polling')
   }
   
-  if (ydoc) {
-    ydoc.destroy()
-    ydoc = null
-  }
-  
-  pixelMap = null
-  awareness = null
-  room = null
+  pixelCache.clear()
+  currentRoom = null
   
   // Reset UI
   initPixelGrid()
   document.getElementById('connectBtn').disabled = false
   document.getElementById('disconnectBtn').disabled = true
-  updateConnectionStatus(null)
-  document.getElementById('peersCount').textContent = '👥 0 peers'
+  document.getElementById('refreshBtn').disabled = true
+  updateConnectionStatus(false)
+  document.getElementById('peersCount').textContent = '🌐 Mode: Serveur'
   document.getElementById('pixelsCount').textContent = '🎨 0 pixels'
 }
 
 // Peindre un pixel
-function paintPixel(x, y) {
-  if (!pixelMap) {
+async function paintPixel(x, y) {
+  if (!currentRoom || !supabase) {
     alert('Connecte-toi d\'abord !')
     return
   }
   
   const key = `${x},${y}`
+  const pixelData = {
+    room: currentRoom,
+    x: x,
+    y: y,
+    color: selectedColor,
+    author: crypto.randomUUID(),
+    timestamp: new Date().toISOString()
+  }
   
-  // Transaction CRDT
-  ydoc.transact(() => {
-    pixelMap.set(key, {
-      color: selectedColor,
-      author: awareness.clientID,
-      timestamp: Date.now()
-    })
-  }, 'local') // Origin de la transaction
+  try {
+    // Upsert (insert ou update) le pixel
+    const { error } = await supabase
+      .from('pixels')
+      .upsert(pixelData, {
+        onConflict: 'room,x,y'
+      })
+    
+    if (error) {
+      console.error('Erreur lors de la peinture:', error)
+      // Si la table n'existe pas, montrer un message d'aide
+      if (error.code === '42P01') {
+        alert('La table pixels n\'existe pas. Créez-la dans Supabase avec les colonnes: room, x, y, color, author, timestamp')
+      }
+    } else {
+      // Mettre à jour localement immédiatement
+      pixelCache.set(key, pixelData)
+      updatePixelDisplay(x, y, selectedColor)
+      metrics.operations++
+    }
+  } catch (error) {
+    console.error('Erreur:', error)
+  }
   
   metrics.operations++
   console.log(`🎨 Pixel peint: ${key} -> ${selectedColor}`)
 }
 
-// Gérer les changements de pixels
-function handlePixelChanges(event, transaction) {
-  console.log('📝 Changements CRDT:', event)
-  
-  // Mettre à jour seulement les pixels qui ont changé
-  event.keysChanged.forEach(key => {
-    const pixelData = pixelMap.get(key)
-    if (pixelData) {
-      const [x, y] = key.split(',').map(Number)
-      updatePixelDisplay(x, y, pixelData)
-    }
-  })
-  
-  // Mettre à jour les métriques
-  metrics.lastSyncTime = Date.now()
-  updatePixelsCount()
-  
-  // Log l'origine de la transaction
-  if (transaction.origin) {
-    console.log(`📍 Origine: ${transaction.origin}`)
+// Gérer les changements en temps réel
+function handleRealtimeChange(payload) {
+  // Si on reçoit des événements realtime, arrêter le polling
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
+    console.log('✅ Realtime fonctionne! Arrêt du polling.')
+    document.getElementById('peersCount').textContent = '✨ Realtime actif'
   }
+  
+  if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+    const pixel = payload.new
+    const key = `${pixel.x},${pixel.y}`
+    pixelCache.set(key, pixel)
+    updatePixelDisplay(pixel.x, pixel.y, pixel.color)
+  } else if (payload.eventType === 'DELETE') {
+    const pixel = payload.old
+    const key = `${pixel.x},${pixel.y}`
+    pixelCache.delete(key)
+    updatePixelDisplay(pixel.x, pixel.y, '#FFFFFF')
+  }
+  updatePixelsCount()
 }
 
 // Mettre à jour l'affichage d'un pixel
-function updatePixelDisplay(x, y, pixelData) {
+function updatePixelDisplay(x, y, color) {
   const pixel = document.querySelector(`[data-x="${x}"][data-y="${y}"]`)
-  if (pixel && pixelData) {
-    pixel.style.backgroundColor = pixelData.color
+  if (pixel) {
+    pixel.style.backgroundColor = color
     pixel.classList.add('pixel-animated')
     setTimeout(() => pixel.classList.remove('pixel-animated'), 300)
   }
@@ -239,27 +407,33 @@ function updatePixelDisplay(x, y, pixelData) {
 
 // Afficher tous les pixels
 function renderAllPixels() {
-  if (!pixelMap) return
-  
-  pixelMap.forEach((pixelData, key) => {
-    const [x, y] = key.split(',').map(Number)
-    updatePixelDisplay(x, y, pixelData)
+  pixelCache.forEach((pixel, key) => {
+    updatePixelDisplay(pixel.x, pixel.y, pixel.color)
   })
-  
   updatePixelsCount()
 }
 
 // Effacer le canvas
-function clearCanvas() {
-  if (!pixelMap) return
+async function clearCanvas() {
+  if (!currentRoom || !supabase) return
   
   if (confirm('Effacer tout le dessin ?')) {
-    ydoc.transact(() => {
-      pixelMap.clear()
-    }, 'clear')
-    
-    initPixelGrid()
-    console.log('🗑️ Canvas effacé')
+    try {
+      const { error } = await supabase
+        .from('pixels')
+        .delete()
+        .eq('room', currentRoom)
+      
+      if (error) {
+        console.error('Erreur lors de l\'effacement:', error)
+      } else {
+        pixelCache.clear()
+        initPixelGrid()
+        console.log('🗑️ Canvas effacé')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+    }
   }
 }
 
@@ -279,41 +453,28 @@ function updateConnectionStatus(synced) {
 }
 
 function updatePeersCount() {
-  if (!awareness) return
-  
-  const states = awareness.getStates()
-  const peersCount = states.size - 1 // -1 pour ne pas se compter
-  document.getElementById('peersCount').textContent = `👥 ${peersCount} peers`
+  // Avec Supabase, on n'a pas de compteur de peers direct
+  document.getElementById('peersCount').textContent = '🌐 Mode: Serveur'
 }
 
 function updatePixelsCount() {
-  if (!pixelMap) return
-  
-  const count = pixelMap.size
+  const count = pixelCache.size
   document.getElementById('pixelsCount').textContent = `🎨 ${count} pixels`
+  document.getElementById('docSize').textContent = `💾 Supabase`
 }
 
 function updateDebugInfo() {
   const debugDiv = document.getElementById('debugInfo')
   
-  if (!ydoc) {
-    debugDiv.textContent = 'Document non initialisé'
-    return
-  }
+  const syncMode = pollingInterval ? 'Polling (2s)' : 'Realtime ✨'
   
-  // Calculer la taille du document
-  const state = Y.encodeStateAsUpdate(ydoc)
-  const sizeKB = (state.byteLength / 1024).toFixed(2)
-  document.getElementById('docSize').textContent = `📄 ${sizeKB} KB`
-  
-  // Info debug
   const debugInfo = {
-    'Room': room || 'Non connecté',
-    'Client ID': ydoc.clientID,
-    'Doc GUID': ydoc.guid,
+    'Room': currentRoom || 'Non connecté',
+    'Backend': 'Supabase',
+    'Sync Mode': syncMode,
     'Operations': metrics.operations,
-    'Pixels': pixelMap ? pixelMap.size : 0,
-    'Doc Size': `${sizeKB} KB`,
+    'Pixels': pixelCache.size,
+    'Status': subscription ? 'Connecté' : 'Déconnecté',
     'Last Sync': new Date(metrics.lastSyncTime).toLocaleTimeString()
   }
   
@@ -321,58 +482,51 @@ function updateDebugInfo() {
 }
 
 // Exposer des fonctions pour le debug
-window.crdtDebug = {
-  getDoc: () => ydoc,
-  getPixels: () => pixelMap ? pixelMap.toJSON() : null,
-  getState: () => ydoc ? Y.encodeStateAsUpdate(ydoc) : null,
-  getHistory: () => {
-    if (!ydoc) return null
-    const state = Y.encodeStateAsUpdate(ydoc)
-    return {
-      size: state.byteLength,
-      pixels: pixelMap ? pixelMap.size : 0,
-      clients: awareness ? awareness.getStates().size : 0
-    }
+window.pixelDebug = {
+  getRoom: () => currentRoom,
+  getPixels: () => Object.fromEntries(pixelCache),
+  getMetrics: () => metrics,
+  clearCache: () => {
+    pixelCache.clear()
+    initPixelGrid()
   },
-  // Simuler des changements concurrents
-  simulateConcurrent: () => {
-    if (!pixelMap) return
+  // Tester la synchronisation
+  testSync: async () => {
+    if (!currentRoom || !supabase) {
+      console.log('❌ Connectez-vous d\'abord!')
+      return
+    }
     
-    console.log('🔀 Simulation de changements concurrents...')
+    console.log('🧪 Test de synchronisation...')
     
-    // Changements rapides sur le même pixel
+    // Ajouter un pixel de test
     const x = Math.floor(Math.random() * GRID_SIZE)
     const y = Math.floor(Math.random() * GRID_SIZE)
-    const key = `${x},${y}`
     
-    // Changement 1
-    setTimeout(() => {
-      ydoc.transact(() => {
-        pixelMap.set(key, {
-          color: '#FF0000',
-          author: 'simulation-1',
-          timestamp: Date.now()
-        })
-      }, 'sim1')
-    }, 0)
+    await paintPixel(x, y)
+    console.log(`Pixel test ajouté en (${x},${y})`)
+  },
+  // Vérifier l'état de la connexion realtime
+  checkRealtime: () => {
+    if (!subscription) {
+      console.log('❌ Pas d\'abonnement actif')
+      return
+    }
     
-    // Changement 2 (presque simultané)
-    setTimeout(() => {
-      ydoc.transact(() => {
-        pixelMap.set(key, {
-          color: '#0000FF',
-          author: 'simulation-2',
-          timestamp: Date.now()
-        })
-      }, 'sim2')
-    }, 10)
+    console.log('📡 État du channel:', subscription.state)
+    console.log('🔌 Socket state:', supabase.getChannels())
     
-    console.log(`Conflits simulés sur pixel (${x},${y})`)
+    // Forcer une reconnexion si nécessaire
+    if (subscription.state !== 'joined') {
+      console.log('🔄 Tentative de reconnexion...')
+      subscription.subscribe()
+    }
   }
 }
 
 console.log('🛠️ Console debug:')
-console.log('  crdtDebug.getDoc()     - Document Yjs')
-console.log('  crdtDebug.getPixels()  - Tous les pixels')
-console.log('  crdtDebug.getHistory() - Statistiques')
-console.log('  crdtDebug.simulateConcurrent() - Tester les conflits')
+console.log('  pixelDebug.getRoom()     - Room actuelle')
+console.log('  pixelDebug.getPixels()   - Tous les pixels')
+console.log('  pixelDebug.getMetrics()  - Statistiques')
+console.log('  pixelDebug.testSync()    - Tester la synchronisation')
+console.log('  pixelDebug.checkRealtime() - Vérifier connexion realtime')
