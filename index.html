@@ -10,6 +10,22 @@
     <div class="container">
         <h1>🎨 Pixel Art Collaboratif</h1>
         
+        <div class="instructions" id="instructions">
+            <div class="instructions-header">
+                <span>ℹ️ Comment utiliser cette démo</span>
+                <button id="toggleInstructions" class="toggle-btn">✕</button>
+            </div>
+            <div class="instructions-content">
+                <ol>
+                    <li><strong>Entrez votre nom</strong> (optionnel) et choisissez une <strong>room</strong></li>
+                    <li><strong>Connectez-vous</strong> - les couleurs apparaîtront</li>
+                    <li><strong>Sélectionnez une couleur</strong> ou utilisez le sélecteur custom</li>
+                    <li><strong>Cliquez sur les pixels</strong> pour peindre - vos amis verront en temps réel !</li>
+                </ol>
+                <p class="tip">💡 <strong>Astuce</strong> : Partagez le nom de votre room avec des amis pour peindre ensemble</p>
+            </div>
+        </div>
+        
         <div class="controls">
             <input type="text" id="nameInput" placeholder="Ton nom" style="width: 150px">
             <input type="text" id="roomInput" placeholder="Nom de la room" value="pixel-room">

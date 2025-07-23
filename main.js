@@ -249,6 +249,22 @@ function setupEventListeners() {
   document.getElementById('disconnectBtn').addEventListener('click', disconnect)
   document.getElementById('clearBtn').addEventListener('click', clearCanvas)
   
+  // Toggle instructions functionality
+  document.getElementById('toggleInstructions').addEventListener('click', () => {
+    const instructions = document.getElementById('instructions')
+    const toggleBtn = document.getElementById('toggleInstructions')
+    
+    if (instructions.classList.contains('collapsed')) {
+      instructions.classList.remove('collapsed')
+      toggleBtn.textContent = '✕'
+      toggleBtn.title = 'Masquer les instructions'
+    } else {
+      instructions.classList.add('collapsed')
+      toggleBtn.textContent = '?'
+      toggleBtn.title = 'Afficher les instructions'
+    }
+  })
+  
   // Sauvegarder le nom quand il change
   document.getElementById('nameInput').addEventListener('input', (e) => {
     myUserName = e.target.value.trim() || null
