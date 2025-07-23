@@ -110,6 +110,8 @@ if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return
 2. **Room connection**: Enter room name, colors appear, start painting
 3. **Visual feedback**: Optimistic updates, pixel animations, cursor tracking
 4. **Collaboration**: See others paint in real-time with their colors
+5. **Sharing**: One-click copy room URL with ?room parameter
+6. **Export**: Download pixel art as PNG with black background
 
 ### Responsive Design
 - **Desktop**: 15px pixels (32x32 = 480px canvas), full feature set
@@ -246,7 +248,14 @@ window.pixelDebug = {
 - **Base path**: `/pixel-art-collab/` for proper asset loading on GitHub Pages
 - **GitHub Secrets**: Sensitive credentials stored as repository secrets for secure build process
 
-### Features
+### Recent Features Added
+- **Room sharing**: URLSearchParams integration for direct room links (?room=name)
+- **PNG export**: Canvas API rendering at 10x scale (320x320px) with black background
+- **Clipboard API**: Async clipboard write with visual feedback
+- **URL persistence**: Room names preserved in shareable links
+- **Export naming**: Timestamped filenames (pixel-art-roomname-timestamp.png)
+
+### Future Features
 - **User accounts**: Persistent identity and artwork saving
 - **Templates**: Pre-made canvases to collaborate on
 - **Animations**: Frame-by-frame pixel art animation

@@ -21,6 +21,13 @@ Create collaborative pixel art in real-time with friends!
 - **Personal color** - Each user gets a unique color matching their cursor
 - **Custom color picker** - Native HTML color picker for infinite possibilities
 - **Optimistic updates** - Instant visual feedback while painting
+- **Continuous drawing** - Hold click to draw while moving
+
+### 🚀 Sharing & Export
+- **Share room link** - One-click URL copy with room parameter
+- **PNG export** - Download your pixel art as 320x320px image
+- **Black background** - Professional look for exported artwork
+- **Direct room links** - Share URLs that auto-fill room names
 
 ### 🔒 Security & Performance
 - **Row Level Security (RLS)** - Database-level access control
@@ -131,6 +138,8 @@ Navigate to `http://localhost:5173` (Vite) or `http://localhost:8080` (Python se
 3. **Select a color** - Choose from preset colors or use the color picker
 4. **Start painting** - Click pixels to paint, drag to draw continuously
 5. **Collaborate** - See other users' cursors and changes in real-time
+6. **Share your room** - Click 🔗 to copy the room URL for friends
+7. **Export your art** - Click 💾 to download as PNG (black background)
 
 ## 🛠 Development
 
