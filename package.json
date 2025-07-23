@@ -13,7 +13,8 @@
     "audit:security": "node scripts/audit-supabase.js",
     "audit:table": "./scripts/audit-table.sh",
     "fix:policies": "./scripts/fix-policies.sh",
-    "diagnose:rls": "node scripts/diagnose-rls.js"
+    "diagnose:rls": "node scripts/diagnose-rls.js",
+    "workflow:reminder": "echo '🔄 WORKFLOW REMINDER: 1) Code changes → 2) Update README → 3) Update CLAUDE.md → 4) Commit → 5) Push'"
   },
   "keywords": [
     "pixel-art",

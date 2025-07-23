@@ -230,6 +230,32 @@ window.pixelDebug = {
 - **Animations**: Frame-by-frame pixel art animation
 - **AI integration**: AI-assisted drawing suggestions
 
+## 🔄 Standard Development Workflow
+
+**IMPORTANT**: Always follow this workflow when making changes to the project:
+
+1. **Make code changes** - Implement the requested feature/fix
+2. **Update README.md** - Ensure setup instructions, features list, and examples are current
+3. **Update CLAUDE.md** - Document any architectural changes, new patterns, or important decisions
+4. **Commit changes** - Use descriptive commit messages with proper formatting
+5. **Push to repository** - Make changes available to others
+
+### Commit Message Template
+```
+Brief description of changes
+
+## Changes Made
+- Bullet point list of specific changes
+- Include both code and documentation updates
+- Mention any breaking changes or new requirements
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Never skip documentation updates** - They're crucial for project maintainability and future AI assistance.
+
 ---
 
 This context should help any AI assistant understand the project's architecture, design decisions, and development patterns when working on future enhancements or debugging issues.
