@@ -269,11 +269,7 @@ window.pixelDebug = {
 - **Grouping**: All minor/patch updates grouped together to reduce PR noise
 - **Security**: Automatic security vulnerability alerts and updates
 - **Actions**: Also updates GitHub Actions versions
-
-### Alternative: Renovate
-- **Configuration**: `renovate.json` provided as alternative
-- **Features**: More granular control, automerge for minor updates
-- **Schedule**: Weekday nights and weekends (Europe/Paris timezone)
+- **Native**: Built into GitHub, no external apps needed
 
 ## 🔄 Standard Development Workflow
 
