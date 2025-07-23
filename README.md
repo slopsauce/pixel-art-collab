@@ -2,6 +2,12 @@
 
 A real-time collaborative pixel art application built with Supabase, featuring live collaboration, user presence, and secure data management.
 
+## 🌐 Live Demo
+
+**🚀 [Try it now: https://slopsauce.github.io/pixel-art-collab/](https://slopsauce.github.io/pixel-art-collab/)**
+
+Create collaborative pixel art in real-time with friends!
+
 ## ✨ Features
 
 ### 🎮 Core Functionality
