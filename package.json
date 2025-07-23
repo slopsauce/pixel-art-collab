@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "serve": "npx serve .",
     "serve:python": "python3 -m http.server 8080",
+    "deploy:preview": "npm run build && npm run preview",
     "audit:security": "node scripts/audit-supabase.js",
     "audit:table": "./scripts/audit-table.sh",
     "fix:policies": "./scripts/fix-policies.sh",
@@ -41,7 +42,8 @@
   },
   "devDependencies": {
     "vite": "^7.0.5",
-    "serve": "^14.2.1"
+    "serve": "^14.2.1",
+    "terser": "^5.36.0"
   },
   "engines": {
     "node": ">=18.0.0"

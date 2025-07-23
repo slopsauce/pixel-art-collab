@@ -224,6 +224,25 @@ window.pixelDebug = {
 - **CDN caching**: Static assets and read-only data
 - **Database optimization**: Indexes, query optimization
 
+## 🚀 Deployment Architecture
+
+### GitHub Pages Setup
+- **Automated deployment**: GitHub Actions workflow on every push to main
+- **Build process**: Vite optimizes and bundles the application
+- **Static hosting**: Perfect for client-side apps with external backend (Supabase)
+- **HTTPS support**: Required for Supabase WebSocket connections
+
+### Build Configuration
+- **vite.config.js**: Configures base path for GitHub Pages subdirectory serving
+- **Production optimizations**: Minification, source maps, asset optimization
+- **Environment handling**: Different base paths for development vs production
+
+### Deployment Considerations
+- **Supabase config**: anon keys are safe for client-side deployment
+- **CORS settings**: Ensure Supabase allows requests from your GitHub Pages domain
+- **WebSocket connections**: HTTPS required, automatically handled by GitHub Pages
+- **Caching**: GitHub Pages provides CDN caching for static assets
+
 ### Features
 - **User accounts**: Persistent identity and artwork saving
 - **Templates**: Pre-made canvases to collaborate on

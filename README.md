@@ -208,11 +208,40 @@ This application implements multiple security layers:
 
 ## 🚀 Deployment
 
-### Static Hosting (Recommended)
+### GitHub Pages (Automated) ⭐ Recommended
+This repository is configured for automatic deployment to GitHub Pages:
+
+1. **Enable GitHub Pages**:
+   - Go to your repository **Settings > Pages**
+   - Under **Source**, select **GitHub Actions**
+   - The deployment will trigger automatically on every push to `main`
+
+2. **Update Repository Name** (if needed):
+   - Edit `vite.config.js` and update the `base` path to match your repository name
+   - If your repo is `https://github.com/username/my-repo`, set `base: '/my-repo/'`
+
+3. **Access Your App**:
+   - Your app will be available at: `https://username.github.io/repository-name/`
+   - Updates deploy automatically when you push to main
+
+### Manual Build and Preview
+Test the production build locally:
+```bash
+# Build for production
+npm run build
+
+# Preview the built site
+npm run preview
+
+# Combined command
+npm run deploy:preview
+```
+
+### Other Static Hosting Options
 Deploy to any static hosting provider:
-- **Vercel**: `vercel deploy`
-- **Netlify**: Drag and drop or Git integration
-- **GitHub Pages**: Enable in repository settings
+- **Vercel**: `vercel deploy` or connect your GitHub repo
+- **Netlify**: Drag and drop the `dist/` folder or Git integration
+- **Surge.sh**: `surge dist/`
 
 ### Self-Hosting
 ```bash
@@ -220,8 +249,11 @@ Deploy to any static hosting provider:
 server {
     listen 80;
     server_name your-domain.com;
-    root /path/to/pixel-art-crdt;
+    root /path/to/pixel-art-crdt/dist;
     index index.html;
+    
+    # Handle client-side routing
+    try_files $uri $uri/ /index.html;
 }
 ```
 
