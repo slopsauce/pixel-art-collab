@@ -265,11 +265,15 @@ window.pixelDebug = {
 
 ### Automated Updates with Dependabot
 - **Configuration**: `.github/dependabot.yml` sets up automatic dependency updates
-- **Schedule**: Weekly checks on Monday mornings
+- **Schedule**: Daily checks at 4:00 AM UTC
 - **Grouping**: All minor/patch updates grouped together to reduce PR noise
 - **Security**: Automatic security vulnerability alerts and updates
 - **Actions**: Also updates GitHub Actions versions
 - **Native**: Built into GitHub, no external apps needed
+- **Auto-merge**: Workflow in `.github/workflows/auto-merge.yml` handles:
+  - Auto-approval of minor and patch updates
+  - Auto-merge activation (requires repo setting enabled)
+  - Major updates require manual review
 
 ## 🔄 Standard Development Workflow
 

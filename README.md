@@ -288,15 +288,19 @@ server {
 
 ### Dependency Management
 This project uses **Dependabot** for automatic dependency updates:
-- Weekly checks for new versions
+- **Daily checks** for new versions (4:00 AM UTC)
 - Automatic pull requests for updates
+- **Auto-merge** for minor and patch updates
+- Manual review required for major updates
 - Grouped updates to reduce noise
 - Security vulnerability alerts
 
 To enable Dependabot on your fork:
 1. Go to **Settings > Security & analysis**
 2. Enable **Dependabot alerts** and **Dependabot security updates**
-3. The `.github/dependabot.yml` configuration is already included
+3. Go to **Settings > General > Pull Requests**
+4. Enable **Allow auto-merge**
+5. The `.github/dependabot.yml` and auto-merge workflow are already configured
 
 ## 📈 Performance
 
