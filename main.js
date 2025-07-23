@@ -33,6 +33,7 @@ let lastCursorX = -1 // Position X du dernier curseur
 let lastCursorY = -1 // Position Y du dernier curseur
 let cursorAnimationFrame = null // Pour l'animation des curseurs
 
+
 // Métriques
 const metrics = {
   operations: 0,
@@ -61,9 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initPixelGrid()
     setupEventListeners()
     
-    // Debug info
-    updateDebugInfo()
-    setInterval(updateDebugInfo, 1000)
     
     console.log('✅ Initialisation terminée')
     console.log('👤 Mon ID:', myUserId)
@@ -270,6 +268,13 @@ async function connect() {
   const roomName = document.getElementById('roomInput').value.trim()
   if (!roomName) {
     alert('Entre un nom de room !')
+    return
+  }
+  
+  
+  // Validation du nom de room pour la sécurité
+  if (roomName.length > 50 || !/^[a-zA-Z0-9-_]+$/.test(roomName)) {
+    alert('Le nom de room doit contenir uniquement des lettres, chiffres, tirets et underscores (max 50 caractères)')
     return
   }
   
@@ -482,6 +487,7 @@ async function paintPixel(x, y) {
     return
   }
   
+  
   const key = `${x},${y}`
   const pixelData = {
     room: currentRoom,
@@ -492,8 +498,13 @@ async function paintPixel(x, y) {
     timestamp: new Date().toISOString()
   }
   
+  // Mettre à jour localement immédiatement pour un feedback instantané
+  pixelCache.set(key, pixelData)
+  updatePixelDisplay(x, y, selectedColor)
+  
+  
   try {
-    // Upsert (insert ou update) le pixel
+    // Envoyer à Supabase en arrière-plan
     const { error } = await supabase
       .from('pixels')
       .upsert(pixelData, {
@@ -502,18 +513,25 @@ async function paintPixel(x, y) {
     
     if (error) {
       console.error('Erreur lors de la peinture:', error)
+      // En cas d'erreur, revenir à l'état précédent
+      const previousPixel = pixelCache.get(key)
+      if (previousPixel) {
+        updatePixelDisplay(x, y, previousPixel.color)
+      } else {
+        pixelCache.delete(key)
+        updatePixelDisplay(x, y, '#FFFFFF')
+      }
+      
       // Si la table n'existe pas, montrer un message d'aide
       if (error.code === '42P01') {
         alert('La table pixels n\'existe pas. Créez-la dans Supabase avec les colonnes: room, x, y, color, author, timestamp')
       }
     } else {
-      // Mettre à jour localement immédiatement
-      pixelCache.set(key, pixelData)
-      updatePixelDisplay(x, y, selectedColor)
       metrics.operations++
     }
   } catch (error) {
     console.error('Erreur:', error)
+    // En cas d'erreur réseau, garder le changement local
   }
   
   metrics.operations++
@@ -561,10 +579,15 @@ function renderAllPixels() {
   updatePixelsCount()
 }
 
-// Effacer le canvas
+// Effacer le canvas (désactivé pour la sécurité)
 async function clearCanvas() {
   if (!currentRoom) return
   
+  // Pour la sécurité publique, désactiver la suppression globale
+  alert('La fonction "Effacer tout" est désactivée pour éviter les abus. Vous pouvez peindre par-dessus les pixels existants.')
+  return
+  
+  /* Code original commenté pour sécurité:
   if (confirm('Effacer tout le dessin ?')) {
     try {
       const { error } = await supabase
@@ -583,20 +606,25 @@ async function clearCanvas() {
       console.error('Erreur:', error)
     }
   }
+  */
 }
 
 // Mises à jour UI
 function updateConnectionStatus(synced) {
   const status = document.getElementById('connectionStatus')
+  
+  // Retirer toutes les classes de statut
+  status.classList.remove('status-connected', 'status-syncing', 'status-disconnected')
+  
   if (synced === null) {
     status.textContent = '🔴 Déconnecté'
-    status.className = 'status-disconnected'
+    status.classList.add('status-disconnected')
   } else if (synced) {
     status.textContent = '🟢 Connecté'
-    status.className = 'status-connected'
+    status.classList.add('status-connected')
   } else {
     status.textContent = '🟡 Synchronisation...'
-    status.className = 'status-syncing'
+    status.classList.add('status-syncing')
   }
 }
 
@@ -703,23 +731,7 @@ function updatePixelsCount() {
   document.getElementById('pixelsCount').textContent = `🎨 ${count} pixels`
 }
 
-function updateDebugInfo() {
-  const debugDiv = document.getElementById('debugInfo')
-  
-  const syncMode = pollingInterval ? 'Polling (2s)' : 'Realtime ✨'
-  
-  const debugInfo = {
-    'Room': currentRoom || 'Non connecté',
-    'Backend': 'Supabase',
-    'Sync Mode': syncMode,
-    'Operations': metrics.operations,
-    'Pixels': pixelCache.size,
-    'Status': subscription ? 'Connecté' : 'Déconnecté',
-    'Last Sync': new Date(metrics.lastSyncTime).toLocaleTimeString()
-  }
-  
-  debugDiv.textContent = JSON.stringify(debugInfo, null, 2)
-}
+
 
 // Exposer des fonctions pour le debug
 window.pixelDebug = {

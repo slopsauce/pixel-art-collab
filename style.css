@@ -130,6 +130,23 @@ h1 {
   border-color: #F44336 !important;
 }
 
+/* Point de synchronisation */
+.sync-dot {
+  display: inline-block;
+  color: #4CAF50;
+  animation: dotPulse 1s ease-in-out infinite;
+  margin-left: 4px;
+}
+
+@keyframes dotPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 /* Color Palette */
 .color-palette {
   display: flex;
@@ -161,6 +178,15 @@ h1 {
   transform: scale(1.15);
 }
 
+/* Main content layout */
+.main-content {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 /* Pixel Canvas */
 .pixel-canvas {
   display: grid;
@@ -168,7 +194,6 @@ h1 {
   background: #333;
   padding: 20px;
   border-radius: 10px;
-  margin: 0 auto;
   width: fit-content;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   position: relative;
@@ -208,6 +233,34 @@ h1 {
   }
 }
 
+/* Pixel en cours de synchronisation */
+.pixel-syncing {
+  position: relative;
+}
+
+.pixel-syncing::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: pixelSync 0.6s linear infinite;
+}
+
+@keyframes pixelSync {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Debug Panel */
 .debug-panel {
   margin-top: 30px;
@@ -233,6 +286,19 @@ h1 {
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .main-content {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .users-list {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 500px;
+  }
+}
+
 @media (max-width: 768px) {
   h1 {
     font-size: 2rem;
@@ -251,6 +317,10 @@ h1 {
   .controls input,
   .controls button {
     width: 100%;
+  }
+  
+  .main-content {
+    gap: 20px;
   }
 }
 
@@ -322,7 +392,8 @@ h1 {
   border: 1px solid #333;
   border-radius: 10px;
   padding: 15px;
-  margin-top: 20px;
+  min-width: 200px;
+  max-width: 250px;
 }
 
 .users-list h4 {
