@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Art CRDT - Yjs</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Pixel Art CRDT avec Yjs</h1>
+        
+        <div class="info-panel">
+            <h3>🔧 Comprendre ce CRDT</h3>
+            <p>Cette app utilise <strong>Yjs</strong>, un framework CRDT :</p>
+            <ul>
+                <li><code>Y.Doc</code> : Document partagé</li>
+                <li><code>Y.Map</code> : Structure key-value CRDT</li>
+                <li><code>WebRTC</code> : Communication P2P</li>
+                <li><code>IndexedDB</code> : Persistance locale</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="roomInput" placeholder="Nom de la room" value="pixel-room">
+            <button id="connectBtn">Se connecter</button>
+            <button id="disconnectBtn" disabled>Se déconnecter</button>
+            <button id="clearBtn">Effacer tout</button>
+        </div>
+
+        <div class="status-bar">
+            <span id="connectionStatus">🔴 Déconnecté</span>
+            <span id="peersCount">👥 0 peers</span>
+            <span id="pixelsCount">🎨 0 pixels</span>
+            <span id="docSize">📄 0 KB</span>
+        </div>
+
+        <div id="colorPalette" class="color-palette"></div>
+        
+        <div id="pixelCanvas" class="pixel-canvas"></div>
+
+        <div class="debug-panel">
+            <h4>🐛 Debug CRDT</h4>
+            <pre id="debugInfo"></pre>
+        </div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>
