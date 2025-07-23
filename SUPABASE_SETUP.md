@@ -1,67 +1,154 @@
-# Configuration Supabase pour Pixel Art
+# Supabase Setup Guide for Pixel Art Collaboratif
 
-## 1. Créer un projet Supabase
+This guide will help you set up the Supabase backend for the collaborative pixel art application.
 
-1. Allez sur [supabase.com](https://supabase.com)
-2. Créez un compte gratuit
-3. Créez un nouveau projet
+## 🚀 1. Create Supabase Project
 
-## 2. Créer la table pixels
+1. Go to [supabase.com](https://supabase.com)
+2. Create a free account
+3. Create a new project
+4. Wait for the project to be fully initialized
 
-Dans l'éditeur SQL de Supabase, exécutez :
+## 🗃️ 2. Create the Database Table
+
+In the Supabase SQL Editor, execute this command to create the pixels table:
 
 ```sql
 CREATE TABLE pixels (
-  room text NOT NULL,
-  x integer NOT NULL,
-  y integer NOT NULL,
-  color text NOT NULL,
-  author text,
-  timestamp timestamptz DEFAULT now(),
+  room TEXT NOT NULL,
+  x INTEGER NOT NULL,
+  y INTEGER NOT NULL,
+  color TEXT NOT NULL,
+  author TEXT NOT NULL,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   PRIMARY KEY (room, x, y)
 );
 
--- Activer les changements en temps réel
+-- Enable real-time replication
 ALTER TABLE pixels REPLICA IDENTITY FULL;
 
--- Autoriser l'accès anonyme (pour la démo)
+-- Enable Row Level Security
 ALTER TABLE pixels ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Enable all access for demo" ON pixels
-FOR ALL USING (true) WITH CHECK (true);
 ```
 
-## 2.1 IMPORTANT: Activer Realtime
+## 🔒 3. Set Up Security Policies
 
-Option 1 - Via l'interface:
-1. Dans Supabase Dashboard, allez dans **Database > Tables**
-2. Cliquez sur la table **pixels**
-3. Cliquez sur **"Realtime off"** en haut
-4. Activez le toggle **"Enable Realtime"**
+Create secure RLS policies that validate data and prevent abuse:
 
-Option 2 - Via SQL:
 ```sql
--- Activer realtime pour la table pixels
+-- Anyone can view pixels
+CREATE POLICY "Anyone can view pixels" ON pixels
+FOR SELECT USING (true);
+
+-- Validate pixel data on insert (32x32 grid, hex colors)
+CREATE POLICY "Allow inserts for valid pixels" ON pixels
+FOR INSERT WITH CHECK (
+  room IS NOT NULL AND
+  length(room) <= 50 AND
+  x >= 0 AND x < 32 AND
+  y >= 0 AND y < 32 AND
+  color ~ '^#[0-9A-Fa-f]{6}$' AND
+  author IS NOT NULL AND
+  length(author) <= 50
+);
+
+-- Same validation for updates
+CREATE POLICY "Allow updates for valid pixels" ON pixels  
+FOR UPDATE USING (
+  room IS NOT NULL AND
+  length(room) <= 50 AND
+  x >= 0 AND x < 32 AND
+  y >= 0 AND y < 32
+) WITH CHECK (
+  color ~ '^#[0-9A-Fa-f]{6}$' AND
+  author IS NOT NULL AND
+  length(author) <= 50
+);
+
+-- Block anonymous deletes (security measure)
+CREATE POLICY "Block anonymous deletes" ON pixels
+FOR DELETE USING (auth.role() != 'anon');
+```
+
+## ⚡ 4. Enable Real-time Subscriptions
+
+**Option 1 - Via Dashboard (Recommended):**
+1. Go to **Database > Replication** in your Supabase dashboard
+2. Find the **pixels** table
+3. Toggle **Enable** for real-time replication
+
+**Option 2 - Via SQL:**
+```sql
+-- Enable real-time for the pixels table
 ALTER PUBLICATION supabase_realtime ADD TABLE pixels;
 ```
 
-Sans cette étape, les changements ne se synchroniseront pas en temps réel!
+⚠️ **Important**: Without this step, changes won't sync in real-time between users!
 
-## 3. Configurer l'application
+## ⚙️ 5. Configure the Application
 
-1. Dans Supabase, allez dans Settings > API
-2. Copiez votre URL du projet et la clé anonyme
-3. Modifiez `supabase-config.js` :
+1. In Supabase Dashboard, go to **Settings > API**
+2. Copy your **Project URL** and **anon/public key**
+3. Copy the example config file:
+   ```bash
+   cp supabase-config.js.example supabase-config.js
+   ```
+4. Edit `supabase-config.js` with your credentials:
+   ```javascript
+   export const SUPABASE_URL = 'https://your-project-id.supabase.co'
+   export const SUPABASE_ANON_KEY = 'your-anon-key-here'
+   ```
 
-```javascript
-export const SUPABASE_URL = 'https://votreprojet.supabase.co'
-export const SUPABASE_ANON_KEY = 'votre-cle-anon'
-```
+## 🎨 6. Launch the Application
 
-## 4. Lancer l'application
+Start the development server:
 
 ```bash
+# Install dependencies
+npm install
+
+# Start Vite development server
 npm run dev
 ```
 
-Ouvrez deux navigateurs sur http://localhost:5173, connectez-vous à la même room, et les pixels se synchroniseront via Supabase !
+Open your browser to `http://localhost:5173`, connect to a room, and start creating collaborative pixel art!
+
+## 🧪 7. Test the Setup
+
+You can verify everything is working by:
+
+1. **Security Audit**: Run the automated security check
+   ```bash
+   npm run audit:security
+   ```
+
+2. **Manual Testing**: 
+   - Open two browser windows
+   - Connect both to the same room name
+   - Paint pixels and verify they sync in real-time
+   - Check that cursors are visible between users
+
+## 🔧 8. Troubleshooting
+
+### Real-time Not Working
+- Verify real-time is enabled for the pixels table
+- Check browser console for WebSocket errors
+- Test with `pixelDebug.checkRealtime()` in browser console
+
+### Security Audit Failing
+- Run diagnostics: `npm run audit:table`
+- Check for policy conflicts: `npm run fix:policies`
+- Verify RLS is enabled on the pixels table
+
+### Connection Issues
+- Verify your Supabase URL and anon key are correct
+- Check Supabase project status (not paused)
+- Test latency: `pixelDebug.testLatency()` in browser console
+
+## 📚 Additional Resources
+
+- [Supabase Documentation](https://supabase.com/docs)
+- [Row Level Security Guide](https://supabase.com/docs/guides/auth/row-level-security)
+- [Real-time Subscriptions](https://supabase.com/docs/guides/realtime)
+
+Your collaborative pixel art application is now ready for real-time collaboration! 🎉

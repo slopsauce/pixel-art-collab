@@ -1,5 +1,5 @@
 
 
-- bug when disconnecting, print "synchronisation", not "disconnected"
-- bug sometimes coloration lags?
 - is it ok to publish it publicly with the supabase secret?
+- share link
+- export png

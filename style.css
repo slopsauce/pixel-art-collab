@@ -245,8 +245,8 @@ h1 {
 }
 
 .pixel {
-  width: 30px;
-  height: 30px;
+  width: 15px;
+  height: 15px;
   background: #0a0a0a;
   cursor: crosshair;
   transition: all 0.1s;
@@ -348,8 +348,8 @@ h1 {
   }
   
   .pixel {
-    width: 20px;
-    height: 20px;
+    width: 10px;
+    height: 10px;
   }
   
   .controls {

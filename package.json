@@ -1,23 +1,48 @@
 {
   "name": "pixel-art-collaboratif",
   "version": "1.0.0",
-  "description": "Application de pixel art collaboratif en temps réel avec Supabase",
-  "main": "index.js",
+  "description": "Real-time collaborative pixel art application with Supabase backend",
+  "main": "main.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "audit:security": "node scripts/audit-supabase.js"
+    "serve": "npx serve .",
+    "serve:python": "python3 -m http.server 8080",
+    "audit:security": "node scripts/audit-supabase.js",
+    "audit:table": "./scripts/audit-table.sh",
+    "fix:policies": "./scripts/fix-policies.sh",
+    "diagnose:rls": "node scripts/diagnose-rls.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
+  "keywords": [
+    "pixel-art",
+    "collaborative",
+    "real-time",
+    "supabase",
+    "websockets",
+    "drawing",
+    "canvas",
+    "multiplayer"
+  ],
+  "author": "Pixel Art Collaboratif Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/pixel-art-crdt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/pixel-art-crdt/issues"
+  },
+  "homepage": "https://github.com/yourusername/pixel-art-crdt#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0"
   },
   "devDependencies": {
-    "vite": "^7.0.5"
+    "vite": "^7.0.5",
+    "serve": "^14.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

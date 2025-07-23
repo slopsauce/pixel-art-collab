@@ -1,0 +1,23 @@
+// Supabase Configuration
+// Copy this file to supabase-config.js and fill in your project details
+
+// Your Supabase project URL
+// Found in: Supabase Dashboard > Settings > API
+export const SUPABASE_URL = 'https://your-project-id.supabase.co'
+
+// Your Supabase anon/public key
+// Found in: Supabase Dashboard > Settings > API > anon/public key
+export const SUPABASE_ANON_KEY = 'your-anon-key-here'
+
+/*
+Instructions:
+1. Go to https://supabase.com and create a new project
+2. Go to Settings > API in your Supabase dashboard
+3. Copy the Project URL and anon key from there
+4. Replace the values above with your actual credentials
+5. Rename this file to supabase-config.js
+
+Security Note:
+The anon key is safe to use in client-side code as it's designed for public access.
+Your database is protected by Row Level Security (RLS) policies.
+*/

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js'
 
 // Configuration
-const GRID_SIZE = 16
+const GRID_SIZE = 32
 let COLORS = [] // Will be loaded from Supabase colors table
 
 // État global

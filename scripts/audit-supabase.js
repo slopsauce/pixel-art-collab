@@ -95,8 +95,8 @@ async function auditDatabase() {
     if (error) throw error
     
     const suspiciousData = data.filter(pixel => 
-      pixel.x < 0 || pixel.x > 31 || 
-      pixel.y < 0 || pixel.y > 31 ||
+      pixel.x < 0 || pixel.x >= 32 || 
+      pixel.y < 0 || pixel.y >= 32 ||
       !pixel.room || pixel.room.length > 50
     )
     
