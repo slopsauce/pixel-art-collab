@@ -239,9 +239,11 @@ window.pixelDebug = {
 
 ### Deployment Considerations
 - **Supabase config**: anon keys are safe for client-side deployment
-- **CORS settings**: Ensure Supabase allows requests from your GitHub Pages domain
+- **CORS settings**: Ensure Supabase allows requests from GitHub Pages domain
+- **Production URL**: https://slopsauce.github.io/pixel-art-collab/
 - **WebSocket connections**: HTTPS required, automatically handled by GitHub Pages
 - **Caching**: GitHub Pages provides CDN caching for static assets
+- **Base path**: `/pixel-art-collab/` for proper asset loading on GitHub Pages
 
 ### Features
 - **User accounts**: Persistent identity and artwork saving

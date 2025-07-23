@@ -221,7 +221,7 @@ This repository is configured for automatic deployment to GitHub Pages:
    - If your repo is `https://github.com/username/my-repo`, set `base: '/my-repo/'`
 
 3. **Access Your App**:
-   - Your app will be available at: `https://username.github.io/repository-name/`
+   - Your app will be available at: `https://slopsauce.github.io/pixel-art-collab/`
    - Updates deploy automatically when you push to main
 
 ### Manual Build and Preview

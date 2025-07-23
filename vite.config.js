@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 // https://vitejs.dev/config/
 export default defineConfig({
   // GitHub Pages serves from /repository-name/ 
-  // Update this to match your repository name
+  // Based on repository: slopsauce/pixel-art-collab
   base: process.env.NODE_ENV === 'production' ? '/pixel-art-collab/' : '/',
   
   build: {
