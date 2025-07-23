@@ -4,11 +4,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js'
 
 // Configuration
 const GRID_SIZE = 16
-const COLORS = [
-  '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF',
-  '#FFFF00', '#FF00FF', '#00FFFF', '#FF8800', '#8800FF',
-  '#88FF00', '#FF0088', '#0088FF', '#666666', '#AAAAAA'
-]
+let COLORS = [] // Will be loaded from Supabase colors table
 
 // État global
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -18,7 +14,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 }) // Client unique avec options
 let currentRoom = null
-let selectedColor = COLORS[2] // Rouge par défaut
+let selectedColor = '#FF0000' // Rouge par défaut (sera mis à jour après chargement des couleurs)
 let pixelCache = new Map() // Cache local des pixels
 let subscription = null
 let pollingInterval = null // Pour la synchronisation par polling
@@ -41,11 +37,12 @@ const metrics = {
 }
 
 // Initialisation au chargement
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Générer un ID utilisateur unique
     myUserId = 'user-' + Math.random().toString(36).substr(2, 9)
-    myUserColor = `hsl(${Math.random() * 360}, 70%, 50%)`
+    const hue = Math.random() * 360
+    myUserColor = `hsl(${hue}, 70%, 50%)`
     
     // Charger le nom sauvegardé
     try {
@@ -58,9 +55,23 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('⚠️ localStorage non disponible:', e)
     }
     
+    await loadColors() // Charger les couleurs d'abord
+    
+    // Ajouter la couleur de l'utilisateur à la palette
+    const userColorHex = hslToHex(hue, 70, 50)
+    COLORS.push({ hex: userColorHex, name: 'Your Color' })
+    selectedColor = userColorHex // Sélectionner par défaut
+    
+    // Réinitialiser la palette avec la couleur utilisateur
     initColorPalette()
     initPixelGrid()
     setupEventListeners()
+    
+    // Masquer la palette au démarrage
+    hideColorPalette()
+    
+    // Initialiser le color picker
+    setupColorPicker()
     
     
     console.log('✅ Initialisation terminée')
@@ -71,20 +82,82 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 })
 
+// Helper function to convert hex to RGB
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+// Helper function to convert HSL to hex
+function hslToHex(h, s, l) {
+  l /= 100;
+  const a = s * Math.min(l, 1 - l) / 100;
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// Charger les couleurs (maintenant hardcodé)
+async function loadColors() {
+  // 8 couleurs essentielles
+  COLORS = [
+    { hex: '#000000', name: 'Black' },
+    { hex: '#FFFFFF', name: 'White' }, 
+    { hex: '#FF0000', name: 'Red' },
+    { hex: '#00FF00', name: 'Green' },
+    { hex: '#0000FF', name: 'Blue' },
+    { hex: '#FFFF00', name: 'Yellow' },
+    { hex: '#FFA500', name: 'Orange' },
+    { hex: '#800080', name: 'Purple' }
+  ];
+  
+  console.log('✅ 8 couleurs essentielles chargées (+ couleur utilisateur sera ajoutée)')
+  
+  // Initialiser la palette après chargement (mais ne pas l'afficher)
+  initColorPalette()
+}
+
+// Masquer la section couleurs
+function hideColorPalette() {
+  const colorSection = document.querySelector('.color-section')
+  colorSection.style.display = 'none'
+}
+
+// Afficher la section couleurs
+function showColorPalette() {
+  const colorSection = document.querySelector('.color-section')
+  colorSection.style.display = 'flex'
+}
+
 // Initialiser la palette de couleurs
 function initColorPalette() {
   const palette = document.getElementById('colorPalette')
+  palette.innerHTML = '' // Clear existing colors
   
-  COLORS.forEach((color, index) => {
+  COLORS.forEach((colorData, index) => {
+    // Handle both object format {hex, name} and string format
+    const colorHex = typeof colorData === 'object' ? colorData.hex : colorData
+    const colorName = typeof colorData === 'object' ? colorData.name : colorHex
+    
     const colorBtn = document.createElement('button')
     colorBtn.className = 'color-btn'
-    colorBtn.style.backgroundColor = color
-    colorBtn.title = color
+    colorBtn.style.backgroundColor = colorHex
+    colorBtn.title = `${colorName} (${colorHex})`
     
-    if (index === 2) colorBtn.classList.add('selected')
+    // Sélectionner la couleur actuellement choisie (par défaut la couleur utilisateur)
+    if (colorHex.toLowerCase() === selectedColor.toLowerCase()) {
+      colorBtn.classList.add('selected')
+    }
     
     colorBtn.addEventListener('click', () => {
-      selectedColor = color
+      selectedColor = colorHex
       document.querySelectorAll('.color-btn').forEach(btn => {
         btn.classList.remove('selected')
       })
@@ -260,6 +333,23 @@ function setupEventListeners() {
   })
 }
 
+// Initialiser le color picker
+function setupColorPicker() {
+  const colorInput = document.getElementById('customColorInput')
+  
+  // Changer la couleur sélectionnée quand l'utilisateur choisit une couleur
+  colorInput.addEventListener('change', () => {
+    selectedColor = colorInput.value
+    
+    // Désélectionner les couleurs de la palette
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      btn.classList.remove('selected')
+    })
+    
+    console.log('Couleur custom sélectionnée:', selectedColor)
+  })
+}
+
 
 // Connexion à une room
 async function connect() {
@@ -321,6 +411,9 @@ async function connect() {
     document.getElementById('disconnectBtn').disabled = false
     updatePixelsCount()
     updateConnectionStatus(true)
+    
+    // Afficher la palette de couleurs
+    showColorPalette()
     
     // Démarrer le polling immédiatement
     startPolling()
@@ -478,6 +571,9 @@ function disconnect() {
   document.getElementById('syncMode').textContent = '💤 Hors ligne'
   document.getElementById('peersCount').textContent = '👥 0 utilisateur'
   document.getElementById('pixelsCount').textContent = '🎨 0 pixels'
+  
+  // Masquer la palette de couleurs
+  hideColorPalette()
 }
 
 // Peindre un pixel
