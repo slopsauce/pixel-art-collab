@@ -13,6 +13,8 @@ on:
 jobs:
   security-audit:
     runs-on: ubuntu-latest
+    # Skip for Dependabot PRs since secrets aren't available
+    if: github.actor != 'dependabot[bot]'
     
     steps:
     - name: Checkout code
