@@ -295,12 +295,12 @@ This project uses **Dependabot** for automatic dependency updates:
 - Grouped updates to reduce noise
 - Security vulnerability alerts
 
-To enable Dependabot on your fork:
-1. Go to **Settings > Security & analysis**
-2. Enable **Dependabot alerts** and **Dependabot security updates**
-3. Go to **Settings > General > Pull Requests**
-4. Enable **Allow auto-merge**
-5. The `.github/dependabot.yml` and auto-merge workflow are already configured
+**Ready to use** - All Dependabot features are pre-configured:
+- Auto-merge is enabled for this repository
+- Security alerts and updates are activated
+- The `.github/dependabot.yml` and auto-merge workflow handle everything automatically
+
+For forks: Enable Dependabot in **Settings > Security & analysis**
 
 ## 📈 Performance
 
