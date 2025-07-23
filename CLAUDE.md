@@ -271,9 +271,23 @@ window.pixelDebug = {
 - **Actions**: Also updates GitHub Actions versions
 - **Native**: Built into GitHub, no external apps needed
 - **Auto-merge**: Workflow in `.github/workflows/auto-merge.yml` handles:
-  - Auto-approval of minor and patch updates
-  - Auto-merge activation (requires repo setting enabled)
+  - Auto-merge activation for minor and patch updates (requires repo setting enabled)
   - Major updates require manual review
+  - **Note**: GitHub Actions cannot auto-approve their own PRs, so first-time approval is still manual
+
+### Security Vulnerability Management
+Recent security fixes (resolved):
+- **on-headers vulnerability**: Fixed HTTP header manipulation security issue
+- **cross-spawn ReDoS vulnerability**: Resolved Regular Expression Denial of Service vulnerability
+- **minimatch & path-to-regexp vulnerabilities**: Fixed pattern matching security issues
+- **serve dependency cascade**: Updated to latest secure version (v14.2.4)
+
+**Why manual intervention was needed**: Dependabot sometimes struggles with complex dependency cascades and breaking changes between major versions. For security-critical updates, manual resolution with `npm audit fix --force` may be necessary to ensure all vulnerabilities are addressed.
+
+### Workflow Challenges & Solutions
+- **Secrets availability**: Dependabot PRs don't have access to repository secrets, so security audit workflows are skipped
+- **Auto-approval limitations**: GitHub Actions cannot approve their own PRs due to security restrictions
+- **Complex dependencies**: Some security fixes require manual intervention when automatic updates fail
 
 ## 🔄 Standard Development Workflow
 

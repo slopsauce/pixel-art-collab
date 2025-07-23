@@ -298,9 +298,19 @@ This project uses **Dependabot** for automatic dependency updates:
 **Ready to use** - All Dependabot features are pre-configured:
 - Auto-merge is enabled for this repository
 - Security alerts and updates are activated
+- Daily dependency checks at 4:00 AM UTC
+- Automatic security vulnerability fixes
 - The `.github/dependabot.yml` and auto-merge workflow handle everything automatically
 
 For forks: Enable Dependabot in **Settings > Security & analysis**
+
+### Security Maintenance
+The project proactively manages security vulnerabilities:
+- ✅ Fixed on-headers vulnerability (HTTP header manipulation)
+- ✅ Fixed cross-spawn ReDoS vulnerability
+- ✅ Fixed minimatch and path-to-regexp vulnerabilities
+- ✅ Updated serve dependency to latest secure version
+- 🔄 Dependabot monitors and auto-fixes new vulnerabilities daily
 
 ## 📈 Performance
 
