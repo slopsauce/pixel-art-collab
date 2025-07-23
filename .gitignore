@@ -6,6 +6,9 @@
 # Supabase configuration (contains secrets)
 supabase-config.js
 
+# Claude local settings (user-specific)
+.claude/settings.local.json
+
 # Node modules
 node_modules/
 npm-debug.log*
