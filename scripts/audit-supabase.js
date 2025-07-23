@@ -31,15 +31,37 @@ async function auditDatabase() {
   // Test 2: Can anonymous users delete data? (Should fail)
   try {
     console.log('\n🔒 2. Testing DELETE protection...')
-    const { error } = await supabase.from('pixels').delete().eq('x', 999)
-    if (error) {
-      console.log('✅   DELETE properly blocked:', error.message)
+    
+    // First insert a test row to try to delete
+    const testData = {
+      room: 'delete-test',
+      x: 5,
+      y: 5,
+      color: '#FF0000',
+      author: 'audit-test'
+    }
+    
+    const { error: insertError } = await supabase.from('pixels').insert(testData)
+    if (insertError) {
+      console.log('   Could not insert test data for DELETE test:', insertError.message)
     } else {
-      console.error('❌   DELETE allowed! This is dangerous!')
-      hasErrors = true
+      // Now try to delete it
+      const { error: deleteError } = await supabase
+        .from('pixels')
+        .delete()
+        .eq('room', 'delete-test')
+        .eq('x', 5)
+        .eq('y', 5)
+      
+      if (deleteError) {
+        console.log('✅   DELETE properly blocked:', deleteError.message)
+      } else {
+        console.error('❌   DELETE allowed! This is dangerous!')
+        hasErrors = true
+      }
     }
   } catch (error) {
-    console.log('✅   DELETE properly blocked')
+    console.log('✅   DELETE properly blocked by exception:', error.message)
   }
   
   // Test 3: Can we insert invalid data? (Should fail)
