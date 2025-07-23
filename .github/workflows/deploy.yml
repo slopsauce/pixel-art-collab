@@ -33,6 +33,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
+      - name: Create Supabase config from secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "// Supabase Configuration (Generated from GitHub Secrets)" > supabase-config.js
+          echo "export const SUPABASE_URL = '$SUPABASE_URL'" >> supabase-config.js
+          echo "export const SUPABASE_ANON_KEY = '$SUPABASE_ANON_KEY'" >> supabase-config.js
+        
       - name: Build with Vite
         run: npm run build
         
