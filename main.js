@@ -11,7 +11,12 @@ const COLORS = [
 ]
 
 // État global
-let supabase = null
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true
+  }
+}) // Client unique avec options
 let currentRoom = null
 let selectedColor = COLORS[2] // Rouge par défaut
 let pixelCache = new Map() // Cache local des pixels
@@ -20,7 +25,13 @@ let pollingInterval = null // Pour la synchronisation par polling
 let presenceChannel = null // Pour la présence des utilisateurs
 let myUserId = null // ID unique de l'utilisateur
 let myUserColor = null // Couleur de l'utilisateur
+let myUserName = null // Nom personnalisé
 let connectedUsers = new Map() // Utilisateurs connectés
+let isDrawing = false // Pour le dessin continu
+let cursorUpdateTimeout = null // Pour throttle les updates curseur
+let lastCursorX = -1 // Position X du dernier curseur
+let lastCursorY = -1 // Position Y du dernier curseur
+let cursorAnimationFrame = null // Pour l'animation des curseurs
 
 // Métriques
 const metrics = {
@@ -34,6 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Générer un ID utilisateur unique
     myUserId = 'user-' + Math.random().toString(36).substr(2, 9)
     myUserColor = `hsl(${Math.random() * 360}, 70%, 50%)`
+    
+    // Charger le nom sauvegardé
+    try {
+      const savedName = localStorage.getItem('pixelArtUserName')
+      if (savedName) {
+        document.getElementById('nameInput').value = savedName
+        myUserName = savedName
+      }
+    } catch (e) {
+      console.warn('⚠️ localStorage non disponible:', e)
+    }
     
     initColorPalette()
     initPixelGrid()
@@ -87,10 +109,32 @@ function initPixelGrid() {
       pixel.className = 'pixel'
       pixel.dataset.x = x
       pixel.dataset.y = y
-      pixel.addEventListener('click', () => paintPixel(x, y))
+      
+      // Click pour peindre un pixel
+      pixel.addEventListener('mousedown', (e) => {
+        e.preventDefault()
+        isDrawing = true
+        paintPixel(x, y)
+      })
+      
+      // Entrer dans un pixel en dessinant
+      pixel.addEventListener('mouseenter', () => {
+        if (isDrawing) {
+          paintPixel(x, y)
+        }
+      })
+      
       canvas.appendChild(pixel)
     }
   }
+  
+  // Arrêter le dessin quand on relâche le bouton
+  document.addEventListener('mouseup', () => {
+    isDrawing = false
+  })
+  
+  // Empêcher la sélection de texte pendant le dessin
+  canvas.addEventListener('selectstart', (e) => e.preventDefault())
 }
 
 // Event listeners
@@ -115,6 +159,26 @@ function setupEventListeners() {
   document.getElementById('clearBtn').addEventListener('click', clearCanvas)
   document.getElementById('refreshBtn').addEventListener('click', manualRefresh)
   
+  // Sauvegarder le nom quand il change
+  document.getElementById('nameInput').addEventListener('input', (e) => {
+    myUserName = e.target.value.trim() || null
+    if (myUserName) {
+      localStorage.setItem('pixelArtUserName', myUserName)
+    } else {
+      localStorage.removeItem('pixelArtUserName')
+    }
+    
+    // Mettre à jour la présence si connecté
+    if (subscription && currentRoom) {
+      subscription.track({
+        userId: myUserId,
+        userName: myUserName,
+        userColor: myUserColor,
+        cursor: { x: lastCursorX, y: lastCursorY }
+      }).catch(() => {})
+    }
+  })
+  
   // Enter pour se connecter
   document.getElementById('roomInput').addEventListener('keypress', async (e) => {
     if (e.key === 'Enter') {
@@ -127,38 +191,55 @@ function setupEventListeners() {
   })
   
   // Suivi du curseur sur la grille
+  let lastUpdateTime = 0
+  
   document.getElementById('pixelCanvas').addEventListener('mousemove', async (e) => {
     if (!subscription || !currentRoom) return
     
-    const pixel = e.target.closest('.pixel')
-    if (pixel) {
-      const x = parseInt(pixel.dataset.x)
-      const y = parseInt(pixel.dataset.y)
-      
-      // Mettre à jour la position du curseur dans la présence
-      await subscription.track({
-        userId: myUserId,
-        userColor: myUserColor,
-        cursor: { x, y }
-      })
-    }
+    const canvas = document.getElementById('pixelCanvas')
+    const rect = canvas.getBoundingClientRect()
+    
+    // Position relative au canvas (pas d'arrondi pour la fluidité)
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    // Limiter à 20 updates par seconde (50ms)
+    const now = Date.now()
+    if (now - lastUpdateTime < 50) return
+    
+    lastUpdateTime = now
+    lastCursorX = x
+    lastCursorY = y
+    
+    // Envoyer la position
+    subscription.track({
+      userId: myUserId,
+      userName: myUserName,
+      userColor: myUserColor,
+      cursor: { x: Math.round(x), y: Math.round(y) }
+    }).catch(() => {})
   })
   
   // Cacher le curseur quand on quitte la grille
-  document.getElementById('pixelCanvas').addEventListener('mouseleave', async () => {
+  document.getElementById('pixelCanvas').addEventListener('mouseleave', () => {
     if (!subscription || !currentRoom) return
     
-    await subscription.track({
+    lastCursorX = -1
+    lastCursorY = -1
+    
+    // Envoyer immédiatement la disparition du curseur
+    subscription.track({
       userId: myUserId,
+      userName: myUserName,
       userColor: myUserColor,
-      cursor: { x: -1, y: -1 }
-    })
+      cursor: null
+    }).catch(() => {})
   })
 }
 
 // Rafraîchir manuellement
 async function manualRefresh() {
-  if (!currentRoom || !supabase) return
+  if (!currentRoom) return
   
   console.log('🔄 Rafraîchissement manuel...')
   const btn = document.getElementById('refreshBtn')
@@ -195,6 +276,8 @@ async function manualRefresh() {
 
 // Connexion à une room
 async function connect() {
+  console.log('🔌 Tentative de connexion...')
+  
   const roomName = document.getElementById('roomInput').value.trim()
   if (!roomName) {
     alert('Entre un nom de room !')
@@ -205,11 +288,16 @@ async function connect() {
   console.log(`🚀 Connexion à la room: ${currentRoom}`)
   
   try {
-    // Initialiser Supabase
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    // Tester si Supabase est accessible
+    console.log('📡 Test de Supabase...')
+    const { data: test, error: testError } = await supabase
+      .from('pixels')
+      .select('count')
+      .limit(1)
     
-    // Créer la table si elle n'existe pas (pour la démo)
-    // En production, créez la table via l'interface Supabase
+    if (testError) {
+      console.error('❌ Erreur Supabase:', testError)
+    }
     
     // Charger les pixels existants
     const { data: pixels, error } = await supabase
@@ -249,7 +337,6 @@ async function connect() {
           filter: `room=eq.${currentRoom}`
         }, 
         (payload) => {
-          console.log('🔄 Changement reçu:', payload)
           handleRealtimeChange(payload)
         }
       )
@@ -257,24 +344,38 @@ async function connect() {
         handlePresenceSync()
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('👋 Utilisateur rejoint:', newPresences)
+        handlePresenceSync()
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('👋 Utilisateur parti:', leftPresences)
+        handlePresenceSync()
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status, error) => {
         console.log('📡 Statut de l\'abonnement:', status)
+        
+        if (error) {
+          console.error('❌ Erreur WebSocket:', error)
+          // Safari peut avoir des problèmes avec les WebSockets
+          if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+            console.warn('🧭 Safari détecté - problèmes WebSocket possibles')
+            alert('Safari peut avoir des problèmes de connexion. Essayez Chrome ou Firefox pour une meilleure expérience.')
+          }
+        }
         
         if (status === 'SUBSCRIBED') {
           console.log('✅ Abonnement réussi au channel:', `room:${currentRoom}`)
           document.getElementById('peersCount').textContent = '✨ Realtime actif'
           
           // Envoyer notre présence
-          await subscription.track({
-            userId: myUserId,
-            userColor: myUserColor,
-            cursor: { x: -1, y: -1 }
-          })
+          try {
+            await subscription.track({
+              userId: myUserId,
+              userName: myUserName,
+              userColor: myUserColor,
+              cursor: { x: -1, y: -1 }
+            })
+          } catch (trackError) {
+            console.error('❌ Erreur track:', trackError)
+          }
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Erreur du channel')
           document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
@@ -297,12 +398,12 @@ function startPolling() {
     clearInterval(pollingInterval)
   }
   
-  console.log('🔄 Démarrage du polling (intervalle: 2s)')
+  // Démarrage du polling silencieux
   document.getElementById('peersCount').textContent = '🔄 Mode: Polling'
   
   // Polling toutes les 2 secondes
   pollingInterval = setInterval(async () => {
-    if (!currentRoom || !supabase) return
+    if (!currentRoom) return
     
     try {
       const { data: pixels, error } = await supabase
@@ -341,7 +442,7 @@ function startPolling() {
         
         if (hasChanges) {
           updatePixelsCount()
-          console.log('🔄 Synchronisation par polling effectuée')
+          // Synchronisation effectuée silencieusement
         }
       }
     } catch (error) {
@@ -365,6 +466,7 @@ function disconnect() {
     console.log('🛑 Arrêt du polling')
   }
   
+  
   pixelCache.clear()
   currentRoom = null
   
@@ -380,7 +482,7 @@ function disconnect() {
 
 // Peindre un pixel
 async function paintPixel(x, y) {
-  if (!currentRoom || !supabase) {
+  if (!currentRoom) {
     alert('Connecte-toi d\'abord !')
     return
   }
@@ -420,7 +522,6 @@ async function paintPixel(x, y) {
   }
   
   metrics.operations++
-  console.log(`🎨 Pixel peint: ${key} -> ${selectedColor}`)
 }
 
 // Gérer les changements en temps réel
@@ -429,7 +530,7 @@ function handleRealtimeChange(payload) {
   if (pollingInterval) {
     clearInterval(pollingInterval)
     pollingInterval = null
-    console.log('✅ Realtime fonctionne! Arrêt du polling.')
+    // Realtime fonctionne, arrêt du polling
     document.getElementById('peersCount').textContent = '✨ Realtime actif'
   }
   
@@ -467,7 +568,7 @@ function renderAllPixels() {
 
 // Effacer le canvas
 async function clearCanvas() {
-  if (!currentRoom || !supabase) return
+  if (!currentRoom) return
   
   if (confirm('Effacer tout le dessin ?')) {
     try {
@@ -512,13 +613,17 @@ function handlePresenceSync() {
   connectedUsers.clear()
   
   // Parcourir tous les utilisateurs présents
-  Object.entries(state).forEach(([key, presences]) => {
+  Object.values(state).forEach(presences => {
     presences.forEach(presence => {
-      connectedUsers.set(presence.userId, {
-        userId: presence.userId,
-        userColor: presence.userColor,
-        cursor: presence.cursor
-      })
+      // La donnée trackée est directement dans l'objet presence
+      if (presence && presence.userId) {
+        connectedUsers.set(presence.userId, {
+          userId: presence.userId,
+          userName: presence.userName,
+          userColor: presence.userColor,
+          cursor: presence.cursor
+        })
+      }
     })
   })
   
@@ -534,9 +639,11 @@ function updateUsersList() {
   connectedUsers.forEach(user => {
     const userItem = document.createElement('div')
     userItem.className = 'user-item'
+    const displayName = user.userName || user.userId
+    const isMe = user.userId === myUserId
     userItem.innerHTML = `
       <div class="user-indicator" style="background-color: ${user.userColor}"></div>
-      <span>${user.userId === myUserId ? 'Moi' : user.userId}</span>
+      <span>${isMe ? 'Moi' : displayName}${isMe && user.userName ? ' (' + user.userName + ')' : ''}</span>
     `
     usersList.appendChild(userItem)
   })
@@ -548,27 +655,45 @@ function updateUsersList() {
 
 // Mettre à jour les curseurs
 function updateCursors() {
-  // Supprimer les anciens curseurs
-  document.querySelectorAll('.user-cursor').forEach(el => el.remove())
+  const canvas = document.getElementById('pixelCanvas')
   
-  // Ajouter les nouveaux curseurs
+  // Gérer tous les curseurs existants
+  const existingCursors = new Set()
+  
   connectedUsers.forEach(user => {
-    if (user.userId === myUserId || user.cursor.x === -1) return
+    if (user.userId === myUserId || !user.cursor) return
     
-    const cursor = document.createElement('div')
-    cursor.className = 'user-cursor'
-    cursor.innerHTML = `
-      <div class="cursor-pointer" style="border-color: ${user.userColor}"></div>
-      <div class="cursor-label" style="background: ${user.userColor}">${user.userId}</div>
-    `
+    existingCursors.add(user.userId)
+    let cursor = document.getElementById(`cursor-${user.userId}`)
     
-    const pixel = document.querySelector(`[data-x="${user.cursor.x}"][data-y="${user.cursor.y}"]`)
-    if (pixel) {
-      const rect = pixel.getBoundingClientRect()
-      const canvasRect = document.getElementById('pixelCanvas').getBoundingClientRect()
-      cursor.style.left = (rect.left - canvasRect.left) + 'px'
-      cursor.style.top = (rect.top - canvasRect.top) + 'px'
-      document.getElementById('pixelCanvas').appendChild(cursor)
+    // Créer le curseur s'il n'existe pas
+    if (!cursor) {
+      cursor = document.createElement('div')
+      cursor.id = `cursor-${user.userId}`
+      cursor.className = 'user-cursor'
+      const displayName = user.userName || user.userId
+      cursor.innerHTML = `
+        <div class="cursor-pointer" style="border-color: ${user.userColor}"></div>
+        <div class="cursor-label" style="background: ${user.userColor}">${displayName}</div>
+      `
+      canvas.appendChild(cursor)
+    }
+    
+    // Positionner le curseur
+    cursor.style.left = user.cursor.x + 'px'
+    cursor.style.top = user.cursor.y + 'px'
+    
+    // Debug: vérifier les positions
+    if (user.userId === Array.from(connectedUsers.keys())[0] && user.userId !== myUserId) {
+      console.log(`🎯 Cursor position for ${user.userName || user.userId}: x=${user.cursor.x}, y=${user.cursor.y}`)
+    }
+  })
+  
+  // Supprimer les curseurs des utilisateurs déconnectés
+  document.querySelectorAll('.user-cursor').forEach(cursor => {
+    const userId = cursor.id.replace('cursor-', '')
+    if (!existingCursors.has(userId)) {
+      cursor.remove()
     }
   })
 }
@@ -613,7 +738,7 @@ window.pixelDebug = {
   },
   // Tester la synchronisation
   testSync: async () => {
-    if (!currentRoom || !supabase) {
+    if (!currentRoom) {
       console.log('❌ Connectez-vous d\'abord!')
       return
     }
@@ -642,6 +767,54 @@ window.pixelDebug = {
       console.log('🔄 Tentative de reconnexion...')
       subscription.subscribe()
     }
+  },
+  // Tester la latence réseau
+  testLatency: async () => {
+    if (!supabase) return
+    
+    console.log('🏓 Test de latence...')
+    const times = []
+    
+    for (let i = 0; i < 5; i++) {
+      const start = Date.now()
+      try {
+        await supabase.from('pixels').select('count').limit(1)
+        const time = Date.now() - start
+        times.push(time)
+        console.log(`  Ping ${i + 1}: ${time}ms`)
+      } catch (error) {
+        console.error('  Erreur:', error)
+      }
+    }
+    
+    if (times.length > 0) {
+      const avg = times.reduce((a, b) => a + b) / times.length
+      console.log(`📊 Latence moyenne: ${avg.toFixed(1)}ms`)
+      
+      if (avg > 200) {
+        console.warn('⚠️ Connexion lente détectée!')
+        console.log('💡 Les curseurs peuvent être saccadés avec cette latence')
+      }
+    }
+  },
+  // Tester CORS
+  testCORS: async () => {
+    console.log('🔍 Test CORS...')
+    console.log('URL Supabase:', SUPABASE_URL)
+    console.log('Navigateur:', navigator.userAgent)
+    
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+        method: 'OPTIONS',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY
+        }
+      })
+      console.log('✅ CORS Headers:', response.headers.get('access-control-allow-origin'))
+    } catch (error) {
+      console.error('❌ CORS Error:', error)
+      console.log('💡 Essayez de désactiver les extensions Safari ou le mode privé')
+    }
   }
 }
 
@@ -651,3 +824,5 @@ console.log('  pixelDebug.getPixels()   - Tous les pixels')
 console.log('  pixelDebug.getMetrics()  - Statistiques')
 console.log('  pixelDebug.testSync()    - Tester la synchronisation')
 console.log('  pixelDebug.checkRealtime() - Vérifier connexion realtime')
+console.log('  pixelDebug.testLatency()   - Tester la latence réseau')
+console.log('  pixelDebug.testCORS()      - Tester les problèmes CORS')

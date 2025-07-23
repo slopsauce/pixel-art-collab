@@ -172,6 +172,8 @@ h1 {
   width: fit-content;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .pixel {
@@ -292,7 +294,6 @@ h1 {
   position: absolute;
   pointer-events: none;
   z-index: 1000;
-  transition: all 0.1s ease-out;
 }
 
 .cursor-pointer {
