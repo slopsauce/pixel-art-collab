@@ -121,15 +121,12 @@ export const SUPABASE_ANON_KEY = 'your-anon-key-here'
 # Install dependencies
 npm install
 
-# Start Vite development server (recommended)
+# Start Vite development server
 npm run dev
-
-# Alternative: Simple HTTP server
-npm run serve:python
 ```
 
 ### 5. Open in Browser
-Navigate to `http://localhost:5173` (Vite) or `http://localhost:8080` (Python server)
+Navigate to `http://localhost:5173`
 
 ## 🎯 Usage
 
@@ -309,7 +306,7 @@ The project proactively manages security vulnerabilities:
 - ✅ Fixed on-headers vulnerability (HTTP header manipulation)
 - ✅ Fixed cross-spawn ReDoS vulnerability
 - ✅ Fixed minimatch and path-to-regexp vulnerabilities
-- ✅ Updated serve dependency to latest secure version
+- ✅ Removed serve dependency (replaced by Vite for cleaner build)
 - 🔄 Dependabot monitors and auto-fixes new vulnerabilities daily
 
 ## 📈 Performance

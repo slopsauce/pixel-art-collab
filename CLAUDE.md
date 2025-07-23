@@ -280,9 +280,9 @@ Recent security fixes (resolved):
 - **on-headers vulnerability**: Fixed HTTP header manipulation security issue
 - **cross-spawn ReDoS vulnerability**: Resolved Regular Expression Denial of Service vulnerability
 - **minimatch & path-to-regexp vulnerabilities**: Fixed pattern matching security issues
-- **serve dependency cascade**: Updated to latest secure version (v14.2.4)
+- **serve dependency removal**: Completely removed serve package (replaced by Vite) to eliminate all transitive vulnerabilities
 
-**Why manual intervention was needed**: Dependabot sometimes struggles with complex dependency cascades and breaking changes between major versions. For security-critical updates, manual resolution with `npm audit fix --force` may be necessary to ensure all vulnerabilities are addressed.
+**Why complete removal was better**: Instead of fighting complex dependency cascades in the `serve` package, we removed it entirely since Vite already provides all needed development and preview server functionality. This approach eliminates vulnerabilities at the source rather than patching them.
 
 ### Workflow Challenges & Solutions
 - **Secrets availability**: Dependabot PRs don't have access to repository secrets, so security audit workflows are skipped
