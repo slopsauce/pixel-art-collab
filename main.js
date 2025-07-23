@@ -250,20 +250,43 @@ function setupEventListeners() {
   document.getElementById('clearBtn').addEventListener('click', clearCanvas)
   
   // Toggle instructions functionality
-  document.getElementById('toggleInstructions').addEventListener('click', () => {
+  const setupInstructions = () => {
     const instructions = document.getElementById('instructions')
+    const helpToggle = document.getElementById('helpToggle')
     const toggleBtn = document.getElementById('toggleInstructions')
     
-    if (instructions.classList.contains('collapsed')) {
-      instructions.classList.remove('collapsed')
-      toggleBtn.textContent = '✕'
-      toggleBtn.title = 'Masquer les instructions'
-    } else {
+    // Load saved state from localStorage
+    const savedState = localStorage.getItem('instructionsCollapsed')
+    const isCollapsed = savedState === 'true'
+    
+    // Apply initial state
+    if (isCollapsed) {
       instructions.classList.add('collapsed')
-      toggleBtn.textContent = '?'
-      toggleBtn.title = 'Afficher les instructions'
+      helpToggle.style.display = 'flex'
+    } else {
+      instructions.classList.remove('collapsed')
+      helpToggle.style.display = 'none'
     }
-  })
+    
+    // Toggle function
+    const toggleInstructions = (show) => {
+      if (show || instructions.classList.contains('collapsed')) {
+        instructions.classList.remove('collapsed')
+        helpToggle.style.display = 'none'
+        localStorage.setItem('instructionsCollapsed', 'false')
+      } else {
+        instructions.classList.add('collapsed')
+        helpToggle.style.display = 'flex'
+        localStorage.setItem('instructionsCollapsed', 'true')
+      }
+    }
+    
+    // Event listeners
+    helpToggle.addEventListener('click', () => toggleInstructions(true))
+    toggleBtn.addEventListener('click', () => toggleInstructions(false))
+  }
+  
+  setupInstructions()
   
   // Sauvegarder le nom quand il change
   document.getElementById('nameInput').addEventListener('input', (e) => {

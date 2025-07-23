@@ -22,11 +22,42 @@ body {
 h1 {
   text-align: center;
   font-size: 2.5rem;
-  margin-bottom: 30px;
   background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  margin: 0;
+}
+
+/* Header Container */
+.header-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.help-toggle {
+  position: absolute;
+  right: 0;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-toggle:hover {
+  background: #333;
+  border-color: #8338ec;
+  transform: scale(1.1);
 }
 
 /* Info Panel */
@@ -168,12 +199,8 @@ h1 {
   font-size: 0.95em;
 }
 
-.instructions.collapsed .instructions-content {
-  display: none;
-}
-
 .instructions.collapsed {
-  margin-bottom: 10px;
+  display: none;
 }
 
 /* Status Bar */
@@ -422,6 +449,16 @@ h1 {
 @media (max-width: 768px) {
   h1 {
     font-size: 2rem;
+  }
+  
+  .header-container {
+    padding: 0 10px;
+  }
+  
+  .help-toggle {
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
   }
   
   .pixel {
