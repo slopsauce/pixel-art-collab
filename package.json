@@ -29,12 +29,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/pixel-art-crdt.git"
+    "url": "https://github.com/slopsauce/pixel-art-collab.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/pixel-art-crdt/issues"
+    "url": "https://github.com/slopsauce/pixel-art-collab/issues"
   },
-  "homepage": "https://github.com/yourusername/pixel-art-crdt#readme",
+  "homepage": "https://github.com/slopsauce/pixel-art-collab#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.52.1"
   },

@@ -44,8 +44,8 @@ Create collaborative pixel art in real-time with friends!
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/pixel-art-crdt.git
-cd pixel-art-crdt
+git clone https://github.com/slopsauce/pixel-art-collab.git
+cd pixel-art-collab
 ```
 
 ### 2. Set Up Supabase
@@ -142,7 +142,7 @@ Navigate to `http://localhost:5173`
 
 ### Project Structure
 ```
-pixel-art-crdt/
+pixel-art-collab/
 ├── index.html              # Main HTML file
 ├── main.js                 # Core application logic
 ├── style.css               # Styling and layout
@@ -261,7 +261,7 @@ Deploy to any static hosting provider:
 server {
     listen 80;
     server_name your-domain.com;
-    root /path/to/pixel-art-crdt/dist;
+    root /path/to/pixel-art-collab/dist;
     index index.html;
     
     # Handle client-side routing
@@ -361,8 +361,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/pixel-art-crdt/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/pixel-art-crdt/discussions)
+- **Issues**: [GitHub Issues](https://github.com/slopsauce/pixel-art-collab/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/slopsauce/pixel-art-collab/discussions)
 - **Security**: Email security issues privately
 
 ---
