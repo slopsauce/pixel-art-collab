@@ -36,7 +36,7 @@
   },
   "homepage": "https://github.com/slopsauce/pixel-art-collab#readme",
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.0"
+    "@supabase/supabase-js": "^2.57.2"
   },
   "devDependencies": {
     "terser": "^5.44.0",
