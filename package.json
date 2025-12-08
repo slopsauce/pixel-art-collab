@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "terser": "^5.44.1",
-    "vite": "^7.2.6"
+    "vite": "^7.2.7"
   },
   "engines": {
     "node": ">=18.0.0"
